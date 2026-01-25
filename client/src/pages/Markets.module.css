@@ -1,0 +1,129 @@
+.container {
+    padding: 1rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+}
+
+.title {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+}
+
+.filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.filterBtn {
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-fast);
+}
+
+.filterBtn:hover,
+.filterBtn.active {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+/* Table */
+.tableContainer {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    text-align: left;
+    padding: 1rem 1.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.table tr:hover {
+    background-color: var(--bg-card-hover);
+}
+
+.assetCell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.assetIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.assetInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.assetName {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.assetSymbol {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.price {
+    font-family: var(--font-mono);
+    font-weight: 500;
+}
+
+.volume {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.actionCell {
+    text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+    .volumeCell,
+    .capCell {
+        display: none;
+    }
+}
