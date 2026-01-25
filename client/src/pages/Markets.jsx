@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Star, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../utils/api';
 import Button from '../components/ui/Button/Button';
@@ -9,13 +9,15 @@ import styles from './Markets.module.css';
 const Markets = () => {
     const [coins, setCoins] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState('all');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const activeFilter = searchParams.get('filter') || 'all';
+    const searchQuery = searchParams.get('search')?.toLowerCase() || '';
 
     useEffect(() => {
         const fetchMarkets = async () => {
             try {
                 const response = await api.get('/crypto');
-                // Handle different response structures gracefully
                 const data = Array.isArray(response.data) ? response.data : response.data.coins || [];
                 setCoins(data);
             } catch (err) {
@@ -26,6 +28,38 @@ const Markets = () => {
         };
         fetchMarkets();
     }, []);
+
+    const filteredAndSortedCoins = useMemo(() => {
+        let result = [...coins];
+
+        // 1. Filter by search query
+        if (searchQuery) {
+            result = result.filter(coin =>
+                coin.name.toLowerCase().includes(searchQuery) ||
+                coin.symbol.toLowerCase().includes(searchQuery)
+            );
+        }
+
+        // 2. Apply category filter/sort
+        if (activeFilter === 'gainers') {
+            result.sort((a, b) => (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0));
+        } else if (activeFilter === 'losers') {
+            result.sort((a, b) => (a.price_change_percentage_24h || 0) - (b.price_change_percentage_24h || 0));
+        }
+
+        return result;
+    }, [coins, activeFilter, searchQuery]);
+
+    const handleFilterChange = (filter) => {
+        setSearchParams(prev => {
+            if (filter === 'all') {
+                prev.delete('filter');
+            } else {
+                prev.set('filter', filter);
+            }
+            return prev;
+        }, { replace: true });
+    };
 
     if (loading) return <div style={{ padding: '2rem' }}>Loading markets...</div>;
 
@@ -39,13 +73,28 @@ const Markets = () => {
             <div className={styles.filters}>
                 <button
                     className={`${styles.filterBtn} ${activeFilter === 'all' ? styles.active : ''}`}
-                    onClick={() => setActiveFilter('all')}
+                    onClick={() => handleFilterChange('all')}
                 >
                     All Assets
                 </button>
-                <button className={styles.filterBtn}><TrendingUp size={14} style={{ marginRight: 6 }} />Top Gainers</button>
-                <button className={styles.filterBtn}><TrendingDown size={14} style={{ marginRight: 6 }} />Top Losers</button>
-                <button className={styles.filterBtn}><Star size={14} style={{ marginRight: 6 }} />Watchlist</button>
+                <button
+                    className={`${styles.filterBtn} ${activeFilter === 'gainers' ? styles.active : ''}`}
+                    onClick={() => handleFilterChange('gainers')}
+                >
+                    <TrendingUp size={14} style={{ marginRight: 6 }} />Top Gainers
+                </button>
+                <button
+                    className={`${styles.filterBtn} ${activeFilter === 'losers' ? styles.active : ''}`}
+                    onClick={() => handleFilterChange('losers')}
+                >
+                    <TrendingDown size={14} style={{ marginRight: 6 }} />Top Losers
+                </button>
+                <button
+                    className={`${styles.filterBtn} ${activeFilter === 'watchlist' ? styles.active : ''}`}
+                    onClick={() => handleFilterChange('watchlist')}
+                >
+                    <Star size={14} style={{ marginRight: 6 }} />Watchlist
+                </button>
             </div>
 
             <div className={styles.tableContainer}>
@@ -61,7 +110,7 @@ const Markets = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {coins.map((coin) => (
+                        {filteredAndSortedCoins.length > 0 ? filteredAndSortedCoins.map((coin) => (
                             <tr key={coin.id}>
                                 <td><Star size={16} color="var(--text-secondary)" style={{ cursor: 'pointer' }} /></td>
                                 <td>
@@ -87,7 +136,13 @@ const Markets = () => {
                                     </Link>
                                 </td>
                             </tr>
-                        ))}
+                        )) : (
+                            <tr>
+                                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                                    No assets found matching your criteria.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>

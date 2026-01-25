@@ -11,6 +11,9 @@ import CryptoDetail from './pages/CryptoDetail';
 import History from './pages/History';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Profile from './pages/Profile';
+import Dashboard from './pages/Dashboard';
+import Trade from './pages/Trade';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -52,12 +55,13 @@ function App() {
 
                 {/* Dashboard Routes - Protected */}
                 <Route element={user ? <DashboardLayout /> : <Navigate to="/login" />}>
-                    <Route path="/dashboard" element={<Navigate to="/markets" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/markets" element={<Markets />} />
                     <Route path="/markets/:id" element={<CryptoDetail />} />
-                    <Route path="/trade" element={<Navigate to="/markets" replace />} /> {/* Redirect to markets to pick asset */}
+                    <Route path="/trade" element={<Trade />} />
                     <Route path="/portfolio" element={<Portfolio />} />
                     <Route path="/history" element={<History />} />
+                    <Route path="/profile" element={<Profile />} />
                     <Route path="*" element={<Navigate to="/markets" replace />} />
                 </Route>
             </Routes>

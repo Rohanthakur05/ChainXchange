@@ -1,0 +1,287 @@
+.container {
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: 2rem;
+}
+
+.title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* Section Titles */
+.sectionTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+/* ===== TOP 8 COINS: GRID LAYOUT ===== */
+.topCoinsSection {
+    margin-bottom: 3rem;
+}
+
+.topCoinsGrid {
+    display: grid;
+    gap: 1rem;
+    /* Mobile First: 1 column */
+    grid-template-columns: 1fr;
+}
+
+/* Tablet: 2 columns × 4 rows */
+@media (min-width: 768px) {
+    .topCoinsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+}
+
+/* Desktop: 4 columns × 2 rows */
+@media (min-width: 1024px) {
+    .topCoinsGrid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+    }
+}
+
+/* Grid Card Styles */
+.gridCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    min-height: 140px;
+}
+
+.gridCard:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--text-secondary);
+    transform: translateY(-2px);
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.coinIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.coinInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.coinName {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.coinSymbol {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.cardBody {
+    margin-top: auto;
+}
+
+.priceRow {
+    margin-bottom: 0.75rem;
+}
+
+.price {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.changeRow {
+    display: flex;
+    align-items: center;
+}
+
+/* ===== REMAINING COINS: HORIZONTAL SCROLL ===== */
+.remainingCoinsSection {
+    margin-top: 2rem;
+}
+
+.horizontalScroll {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 1rem;
+    /* Smooth momentum scrolling */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* Scrollbar Styling */
+.horizontalScroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.horizontalScroll::-webkit-scrollbar-track {
+    background: var(--bg-card);
+    border-radius: 3px;
+}
+
+.horizontalScroll::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+}
+
+.horizontalScroll::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* Compact Card Styles */
+.compactCard {
+    flex: 0 0 auto;
+    width: 200px;
+    min-width: 200px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.compactCard:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--text-secondary);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .compactCard {
+        width: 160px;
+        min-width: 160px;
+        padding: 0.875rem;
+    }
+}
+
+.compactHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.compactIcon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+}
+
+.compactSymbol {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.compactPrice {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.compactBadge {
+    font-size: 0.8rem;
+}
+
+/* ===== LOADING STATE ===== */
+.skeletonCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    min-height: 140px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ===== ERROR STATE ===== */
+.errorState {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 640px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .title {
+        font-size: 1.5rem;
+    }
+
+    .topCoinsGrid {
+        gap: 0.75rem;
+    }
+
+    .gridCard {
+        padding: 1rem;
+        min-height: 120px;
+    }
+
+    .price {
+        font-size: 1.1rem;
+    }
+
+    .horizontalScroll {
+        gap: 0.75rem;
+    }
+}

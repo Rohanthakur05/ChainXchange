@@ -12,23 +12,50 @@ const COLORS = ['#00C853', '#2962FF', '#FFD600', '#FF3D00', '#AB47BC', '#00ACC1'
 const Portfolio = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const fetchPortfolio = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await api.get('/crypto/portfolio');
+            setData(response.data);
+        } catch (err) {
+            console.error("Failed to load portfolio", err);
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchPortfolio = async () => {
-            try {
-                const response = await api.get('/crypto/portfolio');
-                setData(response.data);
-            } catch (err) {
-                console.error("Failed to load portfolio", err);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchPortfolio();
     }, []);
 
     if (loading) return <div style={{ padding: '2rem' }}>Loading portfolio...</div>;
-    if (!data) return <div style={{ padding: '2rem' }}>Error loading data.</div>;
+
+    if (error) {
+        return (
+            <div style={{ padding: '2rem' }}>
+                <h1>Portfolio</h1>
+                <div style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '2rem',
+                    marginTop: '1rem',
+                    textAlign: 'center'
+                }}>
+                    <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+                        Failed to load portfolio data. Please try again.
+                    </p>
+                    <Button onClick={fetchPortfolio}>Retry</Button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!data) return <div style={{ padding: '2rem' }}>No portfolio data available.</div>;
 
     const { portfolioValue, totalProfitLoss, totalProfitLossPercentage, holdings, user } = data;
 
