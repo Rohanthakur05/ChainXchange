@@ -8,6 +8,7 @@ import styles from './Markets.module.css';
 
 const Markets = () => {
     const [coins, setCoins] = useState([]);
+    const [watchlist, setWatchlist] = useState([]); // Array of strings
     const [loading, setLoading] = useState(true);
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -17,9 +18,15 @@ const Markets = () => {
     useEffect(() => {
         const fetchMarkets = async () => {
             try {
-                const response = await api.get('/crypto');
-                const data = Array.isArray(response.data) ? response.data : response.data.coins || [];
+                // Fetch Markets and Profile in parallel
+                const [marketsRes, profileRes] = await Promise.all([
+                    api.get('/crypto'),
+                    api.get('/auth/profile').catch(() => ({ data: { user: { watchlist: [] } } })) // Handle auth error gracefully
+                ]);
+
+                const data = Array.isArray(marketsRes.data) ? marketsRes.data : marketsRes.data.coins || [];
                 setCoins(data);
+                setWatchlist(profileRes.data?.user?.watchlist || []);
             } catch (err) {
                 console.error("Error fetching markets", err);
             } finally {
@@ -28,6 +35,29 @@ const Markets = () => {
         };
         fetchMarkets();
     }, []);
+
+    const toggleWatchlist = async (e, coinId) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Optimistic update
+        const isWatched = watchlist.includes(coinId);
+        let newWatchlist;
+        if (isWatched) {
+            newWatchlist = watchlist.filter(id => id !== coinId);
+        } else {
+            newWatchlist = [...watchlist, coinId];
+        }
+        setWatchlist(newWatchlist);
+
+        try {
+            await api.post('/auth/watchlist/toggle', { coinId });
+        } catch (err) {
+            console.error('Failed to toggle watchlist', err);
+            // Revert on error
+            setWatchlist(watchlist);
+        }
+    };
 
     const filteredAndSortedCoins = useMemo(() => {
         let result = [...coins];
@@ -41,14 +71,16 @@ const Markets = () => {
         }
 
         // 2. Apply category filter/sort
-        if (activeFilter === 'gainers') {
+        if (activeFilter === 'watchlist') {
+            result = result.filter(coin => watchlist.includes(coin.id));
+        } else if (activeFilter === 'gainers') {
             result.sort((a, b) => (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0));
         } else if (activeFilter === 'losers') {
             result.sort((a, b) => (a.price_change_percentage_24h || 0) - (b.price_change_percentage_24h || 0));
         }
 
         return result;
-    }, [coins, activeFilter, searchQuery]);
+    }, [coins, activeFilter, searchQuery, watchlist]);
 
     const handleFilterChange = (filter) => {
         setSearchParams(prev => {
@@ -110,33 +142,48 @@ const Markets = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredAndSortedCoins.length > 0 ? filteredAndSortedCoins.map((coin) => (
-                            <tr key={coin.id}>
-                                <td><Star size={16} color="var(--text-secondary)" style={{ cursor: 'pointer' }} /></td>
-                                <td>
-                                    <div className={styles.assetCell}>
-                                        <img src={coin.image} alt={coin.name} className={styles.assetIcon} />
-                                        <div className={styles.assetInfo}>
-                                            <span className={styles.assetName}>{coin.name}</span>
-                                            <span className={styles.assetSymbol}>{coin.symbol.toUpperCase()}</span>
+                        {filteredAndSortedCoins.length > 0 ? filteredAndSortedCoins.map((coin) => {
+                            const isWatched = watchlist.includes(coin.id);
+                            return (
+                                <tr key={coin.id}>
+                                    <td>
+                                        <div
+                                            onClick={(e) => toggleWatchlist(e, coin.id)}
+                                            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                            title={isWatched ? "Remove from Watchlist" : "Add to Watchlist"}
+                                        >
+                                            <Star
+                                                size={16}
+                                                fill={isWatched ? "#F0B90B" : "none"}
+                                                color={isWatched ? "#F0B90B" : "var(--text-secondary)"}
+                                            />
                                         </div>
-                                    </div>
-                                </td>
-                                <td className={styles.price}>${coin.current_price?.toLocaleString()}</td>
-                                <td>
-                                    <Badge variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}>
-                                        {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
-                                        {(coin.price_change_percentage_24h || 0).toFixed(2)}%
-                                    </Badge>
-                                </td>
-                                <td className={styles.capCell}>${(coin.market_cap || 0).toLocaleString()}</td>
-                                <td className={styles.actionCell}>
-                                    <Link to={`/markets/${coin.id}`}>
-                                        <Button size="sm" variant="secondary">Trade</Button>
-                                    </Link>
-                                </td>
-                            </tr>
-                        )) : (
+                                    </td>
+                                    <td>
+                                        <div className={styles.assetCell}>
+                                            <img src={coin.image} alt={coin.name} className={styles.assetIcon} />
+                                            <div className={styles.assetInfo}>
+                                                <span className={styles.assetName}>{coin.name}</span>
+                                                <span className={styles.assetSymbol}>{coin.symbol.toUpperCase()}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className={styles.price}>${coin.current_price?.toLocaleString()}</td>
+                                    <td>
+                                        <Badge variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}>
+                                            {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
+                                            {(coin.price_change_percentage_24h || 0).toFixed(2)}%
+                                        </Badge>
+                                    </td>
+                                    <td className={styles.capCell}>${(coin.market_cap || 0).toLocaleString()}</td>
+                                    <td className={styles.actionCell}>
+                                        <Link to={`/markets/${coin.id}`}>
+                                            <Button size="sm" variant="secondary">View</Button>
+                                        </Link>
+                                    </td>
+                                </tr>
+                            );
+                        }) : (
                             <tr>
                                 <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                                     No assets found matching your criteria.
@@ -144,9 +191,9 @@ const Markets = () => {
                             </tr>
                         )}
                     </tbody>
-                </table>
-            </div>
-        </div>
+                </table >
+            </div >
+        </div >
     );
 };
 

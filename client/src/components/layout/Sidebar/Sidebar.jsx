@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { LayoutDashboard, LineChart, CandlestickChart, Wallet, User, Settings, LogOut } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import clsx from 'clsx';
@@ -15,9 +15,9 @@ const Sidebar = () => {
 
     return (
         <aside className={styles.sidebar}>
-            <div className={styles.logo}>
+            <Link to="/dashboard" className={styles.logo}>
                 <span>ChainXchange</span>
-            </div>
+            </Link>
 
             <nav className={styles.nav}>
                 {navItems.map((item) => (

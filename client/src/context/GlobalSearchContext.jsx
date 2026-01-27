@@ -48,6 +48,22 @@ export const GlobalSearchProvider = ({ children }) => {
         };
     }, [isSearchOpen]);
 
+    // Hotkey '/' to open search
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === '/' && !isSearchOpen) {
+                // Ignore if typing in input
+                if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+                e.preventDefault();
+                openSearch();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isSearchOpen, openSearch]);
+
     // Filter coins based on search query
     const searchResults = useMemo(() => {
         if (!searchQuery.trim()) {

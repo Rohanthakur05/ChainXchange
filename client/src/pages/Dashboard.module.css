@@ -1,287 +1,233 @@
 .container {
-    padding: 1.5rem;
-    max-width: 1400px;
-    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
 }
 
 .header {
-    margin-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .title {
-    font-size: 1.75rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
     color: var(--text-primary);
 }
 
 .subtitle {
+    margin: 0;
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 14px;
 }
 
-/* Section Titles */
-.sectionTitle {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
+/* Top Section (Watchlist + Leaders) */
+.topSection {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+    align-items: start;
 }
 
-/* ===== TOP 8 COINS: GRID LAYOUT ===== */
-.topCoinsSection {
-    margin-bottom: 3rem;
+.watchlistColumn {
+    /* Watchlist Widget takes full height of this column */
 }
 
+/* Coin Grid */
 .topCoinsGrid {
     display: grid;
-    gap: 1rem;
-    /* Mobile First: 1 column */
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
 }
 
-/* Tablet: 2 columns × 4 rows */
-@media (min-width: 768px) {
-    .topCoinsGrid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
-}
-
-/* Desktop: 4 columns × 2 rows */
-@media (min-width: 1024px) {
-    .topCoinsGrid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1.25rem;
-    }
-}
-
-/* Grid Card Styles */
 .gridCard {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: 1.25rem;
-    transition: all var(--transition-fast);
-    cursor: pointer;
+    padding: 16px;
     text-decoration: none;
+    transition: transform 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
-    min-height: 140px;
+    gap: 12px;
 }
 
 .gridCard:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--text-secondary);
     transform: translateY(-2px);
+    border-color: var(--border-focus);
 }
 
 .cardHeader {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: 12px;
 }
 
 .coinIcon {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
 }
 
 .coinInfo {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-    min-width: 0;
 }
 
 .coinName {
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 14px;
     color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .coinSymbol {
-    font-size: 0.8rem;
+    font-size: 12px;
     color: var(--text-secondary);
-    text-transform: uppercase;
 }
 
 .cardBody {
-    margin-top: auto;
-}
-
-.priceRow {
-    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .price {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 700;
     font-family: var(--font-mono);
+    color: var(--text-primary);
 }
 
-.changeRow {
+.sectionHeader {
     display: flex;
     align-items: center;
+    margin-bottom: 16px;
 }
 
-/* ===== REMAINING COINS: HORIZONTAL SCROLL ===== */
-.remainingCoinsSection {
-    margin-top: 2rem;
+.sectionTitleGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sectionIconGain {
+    color: var(--color-buy);
+}
+
+.sectionIconLoss {
+    color: var(--color-sell);
+}
+
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Segmented Horizontal Scroll Sections */
+.segmentedSection {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
 }
 
 .horizontalScroll {
     display: flex;
-    gap: 1rem;
+    gap: 16px;
     overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 1rem;
-    /* Smooth momentum scrolling */
-    -webkit-overflow-scrolling: touch;
+    padding-bottom: 16px;
     scroll-behavior: smooth;
+    /* Hide Scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-subtle) transparent;
 }
 
-/* Scrollbar Styling */
-.horizontalScroll::-webkit-scrollbar {
-    height: 6px;
-}
-
-.horizontalScroll::-webkit-scrollbar-track {
-    background: var(--bg-card);
-    border-radius: 3px;
-}
-
-.horizontalScroll::-webkit-scrollbar-thumb {
-    background: var(--border-subtle);
-    border-radius: 3px;
-}
-
-.horizontalScroll::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
-}
-
-/* Compact Card Styles */
 .compactCard {
-    flex: 0 0 auto;
-    width: 200px;
-    min-width: 200px;
+    min-width: 180px;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 1rem;
-    transition: all var(--transition-fast);
-    cursor: pointer;
-    text-decoration: none;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
 }
 
 .compactCard:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--text-secondary);
-    transform: translateY(-2px);
-}
-
-@media (max-width: 768px) {
-    .compactCard {
-        width: 160px;
-        min-width: 160px;
-        padding: 0.875rem;
-    }
+    background: var(--bg-secondary);
+    border-color: var(--border-focus);
 }
 
 .compactHeader {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
 .compactIcon {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
 }
 
 .compactSymbol {
+    font-size: 13px;
     font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-}
-
-.compactPrice {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-}
-
-.compactBadge {
-    font-size: 0.8rem;
-}
-
-/* ===== LOADING STATE ===== */
-.skeletonCard {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    min-height: 140px;
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.5;
-    }
-}
-
-/* ===== ERROR STATE ===== */
-.errorState {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 3rem 2rem;
-    text-align: center;
     color: var(--text-secondary);
 }
 
-/* ===== RESPONSIVE ADJUSTMENTS ===== */
-@media (max-width: 640px) {
-    .container {
-        padding: 1rem;
+.compactPrice {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
+/* Loading Skeletons */
+.skeletonCard {
+    height: 120px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
     }
 
-    .title {
-        font-size: 1.5rem;
+    50% {
+        opacity: 0.3;
     }
 
-    .topCoinsGrid {
-        gap: 0.75rem;
+    100% {
+        opacity: 0.6;
+    }
+}
+
+.errorState {
+    padding: 32px;
+    text-align: center;
+    background: rgba(234, 57, 67, 0.1);
+    color: var(--color-sell);
+    border-radius: var(--radius-lg);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .topSection {
+        grid-template-columns: 1fr;
+        /* Stack visually */
     }
 
-    .gridCard {
-        padding: 1rem;
-        min-height: 120px;
-    }
-
-    .price {
-        font-size: 1.1rem;
-    }
-
-    .horizontalScroll {
-        gap: 0.75rem;
+    .watchlistColumn {
+        order: 2;
+        /* Move watchlist below leaders on tablet if desired, or keep above */
+        order: -1;
+        /* Keep watchlist on top */
     }
 }

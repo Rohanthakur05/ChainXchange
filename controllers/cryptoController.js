@@ -600,6 +600,79 @@ class CryptoController {
     }
 
     /**
+     * Get portfolio history chart data
+     * Calculates the value of the CURRENT portfolio over part 30 days
+     */
+    static async getPortfolioHistory(req, res) {
+        try {
+            const userId = req.cookies.user;
+            if (!userId) {
+                return res.status(401).json({ error: 'User not authenticated' });
+            }
+
+            // 1. Get current holdings
+            const portfolio = await Portfolio.find({ userId });
+
+            if (!portfolio || portfolio.length === 0) {
+                return res.json({ history: [] });
+            }
+
+            // 2. Fetch 30-day price history for all coins in parallel
+            const historyPromises = portfolio.map(holding => {
+                return fetchCoinGeckoDataWithCache(
+                    `https://api.coingecko.com/api/v3/coins/${holding.coinId}/market_chart?vs_currency=usd&days=30&interval=daily`,
+                    null,
+                    `chart-${holding.coinId}-30d`,
+                    60 * 60 * 1000 // 1 hour cache
+                ).then(data => ({
+                    coinId: holding.coinId,
+                    quantity: holding.quantity,
+                    prices: data?.prices || [] // [timestamp, price]
+                })).catch(err => ({
+                    coinId: holding.coinId,
+                    quantity: holding.quantity,
+                    prices: [] // Fallback empty
+                }));
+            });
+
+            const coinsHistory = await Promise.all(historyPromises);
+
+            // 3. Aggregate values by timestamp
+            // Create a map of timestamp -> totalValue
+            // CoinGecko timestamps might not align perfectly, so we group by day
+            const historyMap = new Map();
+
+            coinsHistory.forEach(coin => {
+                coin.prices.forEach(([timestamp, price]) => {
+                    // Normalize timestamp to midnight for alignment
+                    const date = new Date(timestamp);
+                    date.setHours(0, 0, 0, 0);
+                    const dateKey = date.toISOString();
+
+                    const currentValue = (historyMap.get(dateKey) || 0);
+                    const coinValue = price * coin.quantity;
+                    historyMap.set(dateKey, currentValue + coinValue);
+                });
+            });
+
+            // 4. Convert map to sorted array
+            const history = Array.from(historyMap.entries())
+                .map(([date, value]) => ({ date, value }))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // 5. Filter out incomplete days (optional, if some coins missing)
+            // For now, we return what we have.
+
+            res.json({ history });
+
+        } catch (error) {
+            console.error('Portfolio history error:', error);
+            // Fallback: Return empty history rather than crashing
+            res.json({ history: [], error: 'Failed to generate history' });
+        }
+    }
+
+    /**
      * Get detailed cryptocurrency data
      */
     static async getCryptoDetail(req, res) {

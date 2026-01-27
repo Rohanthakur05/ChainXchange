@@ -1,11 +1,11 @@
 .container {
     display: grid;
     grid-template-columns: 1fr 320px;
-    grid-template-rows: minmax(400px, 500px) auto;
+    grid-template-rows: minmax(350px, 1fr) auto;
     gap: 1.5rem;
-    height: calc(100vh - 80px);
+    min-height: calc(100vh - 80px);
     /* Fill remaining height */
-    overflow: hidden;
+    overflow: auto;
 }
 
 /* Chart Section */
@@ -40,14 +40,35 @@
 }
 
 .priceDisplay {
-    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .currentPrice {
     font-size: 1.5rem;
     font-family: var(--font-mono);
     font-weight: 600;
-    display: block;
+}
+
+.alertBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.alertBtn:hover {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: white;
 }
 
 .chartWrapper {
@@ -64,40 +85,168 @@
     color: var(--text-secondary);
 }
 
-/* Timeframe Selector */
-.timeframeSelector {
+/* ===== CHART CONTROLS BAR ===== */
+.chartControls {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     margin-bottom: 1rem;
     flex-wrap: wrap;
 }
 
-.timeframeBtn {
-    padding: 0.4rem 0.8rem;
+/* Mode Toggle (Graph / TradingView) */
+.modeToggle {
+    display: flex;
+    background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.modeBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.modeBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+
+.modeBtn.active {
+    background: var(--color-brand);
+    color: white;
+}
+
+/* Timeframe Selector */
+.timeframeSelector {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.timeframeGroup {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.timeframeDivider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-subtle);
+    margin: 0 0.5rem;
+}
+
+.timeframeBtn {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid transparent;
     background: transparent;
     border-radius: var(--radius-sm);
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
 }
 
 .timeframeBtn:hover:not(:disabled) {
     background: var(--bg-card-hover);
-    border-color: var(--text-primary);
     color: var(--text-primary);
 }
 
 .timeframeBtn.active {
-    background: var(--color-brand);
-    border-color: var(--color-brand);
-    color: white;
+    background: var(--bg-secondary);
+    border-color: var(--border-subtle);
+    color: var(--text-primary);
 }
 
 .timeframeBtn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Indicators Button */
+.indicatorsBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.indicatorsBtn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-default);
+}
+
+.indicatorsBtn.hasActive {
+    border-color: var(--color-brand);
+}
+
+.indicatorCount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--color-brand);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: white;
+}
+
+/* Professional Tooltip */
+.proTooltip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tooltipPrice {
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.tooltipChange {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.375rem;
+}
+
+.tooltipChange.positive {
+    color: var(--color-buy);
+}
+
+.tooltipChange.negative {
+    color: var(--color-sell);
+}
+
+.tooltipDate {
+    font-size: 0.7rem;
+    color: var(--text-muted);
 }
 
 /* Order Book */
@@ -292,6 +441,58 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+/* Market Stats Bar */
+.marketStats {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.statLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.statValue {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+/* Custom Tooltip */
+.customTooltip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tooltipPrice {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.tooltipDate {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
 }
 
 /* Responsive */

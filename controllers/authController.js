@@ -147,6 +147,49 @@ class AuthController {
             res.status(500).json({ error: 'Error loading profile' });
         }
     }
+
+    /**
+     * Toggle item in watchlist
+     */
+    static async toggleWatchlist(req, res) {
+        try {
+            const userId = req.cookies.user;
+            const { coinId } = req.body;
+
+            if (!coinId) {
+                return res.status(400).json({ error: 'Coin ID is required' });
+            }
+
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            const index = user.watchlist.indexOf(coinId);
+            let action = '';
+
+            if (index > -1) {
+                // Remove
+                user.watchlist.splice(index, 1);
+                action = 'removed';
+            } else {
+                // Add
+                user.watchlist.push(coinId);
+                action = 'added';
+            }
+
+            await user.save();
+
+            res.json({
+                message: `Successfully ${action} watchlist`,
+                watchlist: user.watchlist
+            });
+
+        } catch (error) {
+            console.error('Watchlist error:', error);
+            res.status(500).json({ error: 'Error updating watchlist' });
+        }
+    }
 }
 
 module.exports = AuthController;

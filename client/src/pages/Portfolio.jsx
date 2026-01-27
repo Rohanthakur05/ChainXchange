@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 import api from '../utils/api';
 import Button from '../components/ui/Button/Button';
 import Badge from '../components/ui/Badge/Badge';
@@ -11,6 +11,7 @@ const COLORS = ['#00C853', '#2962FF', '#FFD600', '#FF3D00', '#AB47BC', '#00ACC1'
 
 const Portfolio = () => {
     const [data, setData] = useState(null);
+    const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -20,6 +21,10 @@ const Portfolio = () => {
         try {
             const response = await api.get('/crypto/portfolio');
             setData(response.data);
+
+            // Fetch history in parallel or after
+            const historyResponse = await api.get('/crypto/portfolio/history');
+            setHistory(historyResponse.data?.history || []);
         } catch (err) {
             console.error("Failed to load portfolio", err);
             setError(err);
@@ -109,7 +114,55 @@ const Portfolio = () => {
 
             {/* Charts & Allocation */}
             <div className={styles.chartsSection}>
-                <div className={styles.chartCard} style={{ gridColumn: '1 / -1' }}>
+                {/* Performance Chart */}
+                <div className={styles.chartCard}>
+                    <div className={styles.chartTitle}>Portfolio Performance (30D)</div>
+                    {history.length > 0 ? (
+                        <div className={styles.chartWrapper} style={{ height: '300px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={history}>
+                                    <defs>
+                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#2962FF" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#2962FF" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                                    <XAxis
+                                        dataKey="date"
+                                        tickFormatter={date => new Date(date).getDate()}
+                                        hide
+                                    />
+                                    <YAxis
+                                        domain={['auto', 'auto']}
+                                        orientation="right"
+                                        tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                                        tickFormatter={val => `$${val.toLocaleString()}`}
+                                    />
+                                    <ReTooltip
+                                        contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}
+                                        formatter={(value) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
+                                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="value"
+                                        stroke="#2962FF"
+                                        fillOpacity={1}
+                                        fill="url(#colorValue)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className={styles.emptyChart}>
+                            Insufficient data for history.
+                        </div>
+                    )}
+                </div>
+
+                {/* Asset Allocation */}
+                <div className={styles.chartCard} style={{ gridColumn: 'span 1' }}>
                     <div className={styles.chartTitle}>Asset Allocation</div>
                     {holdings.length > 0 ? (
                         <div className={styles.chartWrapper} style={{ height: '300px' }}>

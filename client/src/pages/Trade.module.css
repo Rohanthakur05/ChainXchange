@@ -1,6 +1,6 @@
 .container {
     padding: 1.5rem;
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
 }
 
@@ -20,73 +20,208 @@
     font-size: 0.95rem;
 }
 
-.searchBox {
-    margin-bottom: 2rem;
-    max-width: 500px;
-}
-
-.coinGrid {
+/* Quick Stats Row */
+.statsRow {
     display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    margin-bottom: 2rem;
 }
 
-.coinCard {
+.statCard {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     padding: 1.25rem;
-    transition: all var(--transition-fast);
-    cursor: pointer;
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
 }
 
-.coinCard:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--text-secondary);
-    transform: translateY(-2px);
-}
-
-.coinHeader {
+.statIcon {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    color: var(--color-brand);
 }
 
-.coinIcon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-}
-
-.coinInfo {
+.statInfo {
     display: flex;
     flex-direction: column;
-    flex: 1;
 }
 
-.coinName {
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-}
-
-.coinSymbol {
+.statLabel {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
 }
 
-.coinPrice {
-    font-size: 1.2rem;
+.statValue {
+    font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-primary);
     font-family: var(--font-mono);
 }
 
-.errorState,
+/* Sections */
+.section {
+    margin-bottom: 2rem;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.sectionHint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.viewAllLink {
+    font-size: 0.85rem;
+    color: var(--color-brand);
+    text-decoration: none;
+}
+
+.viewAllLink:hover {
+    text-decoration: underline;
+}
+
+/* Holdings Grid */
+.holdingsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.holdingCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1rem;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.holdingCard:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--color-brand);
+}
+
+.holdingInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.holdingSymbol {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.holdingQty {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Trades List */
+.tradesList {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.tradeItem {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.tradeItem:last-child {
+    border-bottom: none;
+}
+
+.tradeIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+}
+
+.buyIcon {
+    color: var(--color-buy);
+}
+
+.sellIcon {
+    color: var(--color-sell);
+}
+
+.tradeInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.tradeAction {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.tradeTime {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.tradeAmount {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+}
+
+.positive {
+    color: var(--color-buy);
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+.negative {
+    color: var(--color-sell);
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+.tradeQty {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+/* Empty State */
 .emptyState {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
@@ -94,23 +229,42 @@
     padding: 3rem 2rem;
     text-align: center;
     color: var(--text-secondary);
-    grid-column: 1 / -1;
 }
 
-.errorState button {
+.emptyState button {
     margin-top: 1rem;
 }
 
-@media (max-width: 640px) {
+/* CTA Section */
+.ctaSection {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+}
+
+.ctaText {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .statsRow {
+        grid-template-columns: 1fr;
+    }
+
+    .holdingsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
     .container {
         padding: 1rem;
     }
 
-    .title {
-        font-size: 1.5rem;
-    }
-
-    .coinGrid {
+    .holdingsGrid {
         grid-template-columns: 1fr;
     }
 }

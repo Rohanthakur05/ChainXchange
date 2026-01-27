@@ -1,10 +1,14 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, CandlestickChart, Bell, SlidersHorizontal, Maximize2 } from 'lucide-react';
 import api from '../utils/api';
 import Button from '../components/ui/Button/Button';
 import Input from '../components/ui/Input/Input';
 import Badge from '../components/ui/Badge/Badge';
+import TradingViewChart from '../components/charts/TradingViewChart';
+import CreateAlertModal from '../components/alerts/CreateAlertModal';
+import IndicatorsPanel from '../components/charts/IndicatorsPanel';
 import styles from './CryptoDetail.module.css';
 
 const OrderRow = ({ price, amount, type }) => (
@@ -14,20 +18,45 @@ const OrderRow = ({ price, amount, type }) => (
     </div>
 );
 
+// Comprehensive timeframes - Short-term and Long-term
 const TIMEFRAMES = [
-    { label: '5m', value: '5min', days: 1 },
-    { label: '15m', value: '15min', days: 1 },
-    { label: '1H', value: '1H', days: 1 },
-    { label: '1D', value: '1D', days: 1 },
-    { label: '1W', value: '1W', days: 7 },
-    { label: '1M', value: '1M', days: 30 },
-    { label: '6M', value: '6M', days: 180 },
-    { label: '1Y', value: '1Y', days: 365 },
-    { label: 'ALL', value: 'ALL', days: 'max' }
+    // Short-term
+    { label: '5m', value: '5m', days: 1, group: 'short' },
+    { label: '15m', value: '15m', days: 1, group: 'short' },
+    { label: '1H', value: '1h', days: 1, group: 'short' },
+    { label: '4H', value: '4h', days: 1, group: 'short' },
+    { label: '24H', value: '24h', days: 1, group: 'short' },
+    // Long-term
+    { label: '1W', value: '1W', days: 7, group: 'long' },
+    { label: '1M', value: '1M', days: 30, group: 'long' },
+    { label: '1Y', value: '1Y', days: 365, group: 'long' },
+    { label: 'ALL', value: 'ALL', days: 'max', group: 'long' }
 ];
+
+// Professional tooltip for chart
+const ProfessionalTooltip = ({ active, payload, label, chartData }) => {
+    if (!active || !payload?.length) return null;
+
+    const currentPrice = payload[0].value;
+    const openPrice = chartData?.[0]?.price || currentPrice;
+    const changePercent = ((currentPrice - openPrice) / openPrice) * 100;
+
+    return (
+        <div className={styles.proTooltip}>
+            <div className={styles.tooltipPrice}>
+                ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className={`${styles.tooltipChange} ${changePercent >= 0 ? styles.positive : styles.negative}`}>
+                {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}% from open
+            </div>
+            <div className={styles.tooltipDate}>{label}</div>
+        </div>
+    );
+};
 
 const CryptoDetail = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [coin, setCoin] = useState(null);
     const [chartData, setChartData] = useState([]);
     const [tradeType, setTradeType] = useState('buy');
@@ -37,8 +66,39 @@ const CryptoDetail = () => {
     const [holdings, setHoldings] = useState(null);
     const [orderPreview, setOrderPreview] = useState(null);
     const [submitting, setSubmitting] = useState(false);
-    const [timeframe, setTimeframe] = useState('1D');
+    const [timeframe, setTimeframe] = useState('24h');
     const [chartLoading, setChartLoading] = useState(false);
+    const [chartMode, setChartMode] = useState('graph'); // 'graph' | 'tradingview'
+    const [alertModalOpen, setAlertModalOpen] = useState(false);
+    const [indicatorsPanelOpen, setIndicatorsPanelOpen] = useState(false);
+
+    // Load indicators from localStorage (user's explicit choices)
+    const [activeIndicators, setActiveIndicators] = useState(() => {
+        const saved = localStorage.getItem(`chart_indicators_${id}`);
+        return saved ? JSON.parse(saved) : [];  // Empty by default, no auto-apply
+    });
+
+    // Save indicators to localStorage when they change
+    useEffect(() => {
+        localStorage.setItem(`chart_indicators_${id}`, JSON.stringify(activeIndicators));
+    }, [activeIndicators, id]);
+
+    // Map active indicators to TradingView studies
+    const tvStudies = useMemo(() => {
+        const map = {
+            'rsi': 'RSI@tv-basicstudies',
+            'macd': 'MACD@tv-basicstudies',
+            'stoch': 'Stochastic@tv-basicstudies',
+            'ema': 'Moving Average Exponential@tv-basicstudies',
+            'bb': 'Bollinger Bands@tv-basicstudies',
+            'volume': 'Volume@tv-basicstudies',
+            'ma20': 'Moving Average@tv-basicstudies',
+            'ma50': 'Moving Average@tv-basicstudies',
+            'ma200': 'Moving Average@tv-basicstudies',
+        };
+        // Dedup studies since multiple MAs might map to same study string
+        return [...new Set(activeIndicators.map(id => map[id]).filter(Boolean))];
+    }, [activeIndicators]);
 
     // Fetch wallet balance
     const fetchWallet = async () => {
@@ -215,6 +275,17 @@ const CryptoDetail = () => {
         return parseFloat(quantity) * coin.current_price;
     }, [quantity, coin]);
 
+    // Calculate price change for dynamic chart coloring
+    const priceChange = useMemo(() => {
+        if (chartData.length < 2) return 0;
+        const first = chartData[0].price;
+        const last = chartData[chartData.length - 1].price;
+        return ((last - first) / first) * 100;
+    }, [chartData]);
+
+    // Dynamic chart color based on price movement
+    const chartColor = priceChange >= 0 ? '#00C853' : '#FF3D00';
+
     if (!coin) return <div style={{ padding: '2rem' }}>Loading...</div>;
 
     // Mock Order Book Data
@@ -245,46 +316,142 @@ const CryptoDetail = () => {
                             {coin.price_change_percentage_24h >= 0 ? '+' : ''}
                             {coin.price_change_percentage_24h.toFixed(2)}%
                         </Badge>
+                        <button
+                            className={styles.alertBtn}
+                            onClick={() => setAlertModalOpen(true)}
+                            title="Set Price Alert"
+                        >
+                            <Bell size={18} />
+                        </button>
                     </div>
                 </div>
 
-                {/* Timeframe Selector */}
-                <div className={styles.timeframeSelector}>
-                    {TIMEFRAMES.map(tf => (
-                        <button
-                            key={tf.value}
-                            className={`${styles.timeframeBtn} ${timeframe === tf.value ? styles.active : ''}`}
-                            onClick={() => setTimeframe(tf.value)}
-                            disabled={chartLoading}
-                        >
-                            {tf.label}
-                        </button>
-                    ))}
+                {/* Market Stats Bar */}
+                <div className={styles.marketStats}>
+                    <div className={styles.statItem}>
+                        <span className={styles.statLabel}>Market Cap</span>
+                        <span className={styles.statValue}>${coin.market_cap?.toLocaleString()}</span>
+                    </div>
+                    <div className={styles.statItem}>
+                        <span className={styles.statLabel}>24h Volume</span>
+                        <span className={styles.statValue}>${coin.total_volume?.toLocaleString()}</span>
+                    </div>
+                    <div className={styles.statItem}>
+                        <span className={styles.statLabel}>24h High</span>
+                        <span className={styles.statValue}>${coin.high_24h?.toLocaleString()}</span>
+                    </div>
+                    <div className={styles.statItem}>
+                        <span className={styles.statLabel}>24h Low</span>
+                        <span className={styles.statValue}>${coin.low_24h?.toLocaleString()}</span>
+                    </div>
                 </div>
 
+                {/* Chart Controls Bar */}
+                <div className={styles.chartControls}>
+                    {/* Mode Toggle */}
+                    <div className={styles.modeToggle}>
+                        <button
+                            className={`${styles.modeBtn} ${chartMode === 'graph' ? styles.active : ''}`}
+                            onClick={() => setChartMode('graph')}
+                            title="Line Chart"
+                        >
+                            <LineChart size={18} />
+                        </button>
+                        <button
+                            className={`${styles.modeBtn} ${chartMode === 'tradingview' ? styles.active : ''}`}
+                            onClick={() => setChartMode('tradingview')}
+                            title="TradingView (Advanced)"
+                        >
+                            <CandlestickChart size={18} />
+                        </button>
+                    </div>
+
+                    {/* Timeframe Selector - Only show for graph mode */}
+                    {chartMode === 'graph' && (
+                        <div className={styles.timeframeSelector}>
+                            <div className={styles.timeframeGroup}>
+                                {TIMEFRAMES.filter(tf => tf.group === 'short').map(tf => (
+                                    <button
+                                        key={tf.value}
+                                        className={`${styles.timeframeBtn} ${timeframe === tf.value ? styles.active : ''}`}
+                                        onClick={() => setTimeframe(tf.value)}
+                                        disabled={chartLoading}
+                                    >
+                                        {tf.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className={styles.timeframeDivider} />
+                            <div className={styles.timeframeGroup}>
+                                {TIMEFRAMES.filter(tf => tf.group === 'long').map(tf => (
+                                    <button
+                                        key={tf.value}
+                                        className={`${styles.timeframeBtn} ${timeframe === tf.value ? styles.active : ''}`}
+                                        onClick={() => setTimeframe(tf.value)}
+                                        disabled={chartLoading}
+                                    >
+                                        {tf.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Indicators Button - Available in BOTH modes */}
+                    <button
+                        className={`${styles.indicatorsBtn} ${activeIndicators.length > 0 ? styles.hasActive : ''}`}
+                        onClick={() => setIndicatorsPanelOpen(true)}
+                        title="Indicators"
+                    >
+                        <SlidersHorizontal size={16} />
+                        <span>Indicators</span>
+                        {activeIndicators.length > 0 && (
+                            <span className={styles.indicatorCount}>{activeIndicators.length}</span>
+                        )}
+                    </button>
+
+                    {/* Terminal Button */}
+                    <button
+                        className={styles.indicatorsBtn}
+                        onClick={() => navigate(`/terminal/${id}`)}
+                        title="Open Full-Screen Terminal"
+                    >
+                        <Maximize2 size={16} />
+                        <span>Terminal</span>
+                    </button>
+
+                </div>
+
+                {/* Chart Container */}
                 <div className={styles.chartWrapper}>
-                    {chartLoading ? (
-                        <div className={styles.chartLoading}>Loading chart data...</div>
+                    {chartMode === 'graph' ? (
+                        // Graph Mode - Recharts Area Chart
+                        chartLoading ? (
+                            <div className={styles.chartLoading}>Loading chart data...</div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData}>
+                                    <defs>
+                                        <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#21262D" vertical={false} />
+                                    <XAxis dataKey="date" hide />
+                                    <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fill: '#8B949E' }} />
+                                    <Tooltip content={<ProfessionalTooltip chartData={chartData} />} />
+                                    <Area type="monotone" dataKey="price" stroke={chartColor} strokeWidth={2} fillOpacity={1} fill="url(#priceGradient)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        )
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData}>
-                                <defs>
-                                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#00C853" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#00C853" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#21262D" vertical={false} />
-                                <XAxis dataKey="date" hide />
-                                <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fill: '#8B949E' }} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#161B22', border: '1px solid #30363D' }}
-                                    itemStyle={{ color: '#C9D1D9' }}
-                                    formatter={(val) => [`$${val.toLocaleString()}`]}
-                                />
-                                <Area type="monotone" dataKey="price" stroke="#00C853" fillOpacity={1} fill="url(#colorPrice)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        // TradingView Mode - Full Advanced Chart
+                        <TradingViewChart
+                            symbol={coin.symbol}
+                            theme="dark"
+                            studies={tvStudies}
+                        />
                     )}
                 </div>
             </div>
@@ -469,6 +636,30 @@ const CryptoDetail = () => {
                     ))}
                 </div>
             </div>
+
+            {/* Alert Modal */}
+            {alertModalOpen && (
+                <CreateAlertModal
+                    coin={coin}
+                    currentPrice={coin.current_price}
+                    onClose={() => setAlertModalOpen(false)}
+                    onCreated={() => console.log('Alert created!')}
+                />
+            )}
+
+            {/* Indicators Panel */}
+            <IndicatorsPanel
+                isOpen={indicatorsPanelOpen}
+                onClose={() => setIndicatorsPanelOpen(false)}
+                activeIndicators={activeIndicators}
+                onToggleIndicator={(id) => {
+                    setActiveIndicators(prev =>
+                        prev.includes(id)
+                            ? prev.filter(i => i !== id)
+                            : [...prev, id]
+                    );
+                }}
+            />
         </div>
     );
 };

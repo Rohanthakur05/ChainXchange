@@ -12,7 +12,8 @@ router.post('/sell', isAuthenticated, CryptoController.sellCrypto);
 router.get('/chart-data/:coinId', CryptoController.getChartData);
 
 // User transaction history
-router.get('/history', isAuthenticated, CryptoController.getHistory); // Updated method name
+router.get('/history', isAuthenticated, CryptoController.getHistory);
+router.get('/portfolio/history', isAuthenticated, CryptoController.getPortfolioHistory); // New endpoint
 
 // Debug route for testing chart data
 router.get('/test-chart/:coinId', (req, res) => {

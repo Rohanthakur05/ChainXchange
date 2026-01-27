@@ -48,7 +48,7 @@
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 1.5rem;
-    height: 350px;
+    min-height: 400px;
 }
 
 .chartCard {
@@ -58,6 +58,7 @@
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .chartTitle {
@@ -69,7 +70,19 @@
 
 .chartWrapper {
     flex: 1;
-    min-height: 0;
+    min-height: 300px;
+}
+
+.emptyChart {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    min-height: 300px;
 }
 
 /* Assets List */
@@ -160,7 +173,8 @@
         height: auto;
     }
 
-    .chartWrapper {
+    .chartWrapper,
+    .emptyChart {
         height: 300px;
     }
 }

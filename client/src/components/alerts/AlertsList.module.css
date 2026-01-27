@@ -1,0 +1,162 @@
+.container {
+    width: 100%;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.headerTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.loading {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.empty svg {
+    opacity: 0.5;
+    margin-bottom: 0.75rem;
+}
+
+.empty p {
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.empty span {
+    font-size: 0.8rem;
+}
+
+.list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.alertItem {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background-color var(--transition-fast);
+}
+
+.alertItem:hover {
+    background: var(--bg-secondary);
+}
+
+.alertItem.triggered {
+    opacity: 0.7;
+}
+
+.alertItem.paused {
+    opacity: 0.5;
+}
+
+.alertIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    color: var(--color-brand);
+}
+
+.alertItem.triggered .alertIcon {
+    background: rgba(22, 199, 132, 0.1);
+    color: var(--color-buy);
+}
+
+.alertContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.alertTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.125rem;
+}
+
+.coinSymbol {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.alertType {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.alertCondition {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+.alertMeta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.triggeredLabel {
+    color: var(--color-buy);
+}
+
+.alertActions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.actionBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.actionBtn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.deleteBtn:hover {
+    color: var(--color-sell);
+}

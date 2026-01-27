@@ -12,6 +12,7 @@ const MongoStore = require('connect-mongo');
 const authRoutes = require('./routes/auth.js');
 const cryptoRoutes = require('./routes/crypto.js');
 const paymentRoutes = require('./routes/payment.js');
+const alertsRoutes = require('./routes/alerts.js');
 const User = require('./models/User.js');
 const { isAuthenticated } = require('./middleware/auth');
 const HomeController = require('./controllers/homeController');
@@ -83,6 +84,7 @@ app.use(async (req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/crypto', cryptoRoutes);
 app.use('/payment', paymentRoutes);
+app.use('/alerts', alertsRoutes);
 app.get('/api/home', HomeController.getHomeData); // New API endpoint for home data
 
 // WebSocket Setup for real-time updates

@@ -1,10 +1,100 @@
-import React from 'react';
-import { Search, Bell } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Bell, Wallet, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 import { useGlobalSearch } from '../../../context/GlobalSearchContext';
+import api from '../../../utils/api';
 import styles from './Topbar.module.css';
 
 const Topbar = () => {
     const { openSearch } = useGlobalSearch();
+    const navigate = useNavigate();
+    const controlsRef = useRef(null);
+
+    // Dropdown states
+    const [notifOpen, setNotifOpen] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        fetchNotifications();
+        // Poll every minute
+        const interval = setInterval(fetchNotifications, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const response = await api.get('/alerts');
+            if (response.data?.alerts) {
+                // Filter for triggered alerts
+                const triggered = response.data.alerts
+                    .filter(a => a.status === 'triggered')
+                    .sort((a, b) => new Date(b.triggeredAt) - new Date(a.triggeredAt)); // Newest first
+
+                // Map to notification format
+                const notifs = triggered.map(alert => ({
+                    id: alert._id,
+                    message: `${alert.coinSymbol} triggered: ${formatCondition(alert)}`,
+                    time: formatDate(alert.triggeredAt),
+                    read: false // simplistic read state
+                }));
+
+                setNotifications(notifs);
+                setUnreadCount(notifs.length);
+            }
+        } catch (error) {
+            console.error('Failed to fetch notifications', error);
+        }
+    };
+
+    const formatCondition = (alert) => {
+        if (alert.type.includes('price')) return `Price hit target`;
+        return `Price moved by ${alert.percentageThreshold}%`;
+    };
+
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.round(diffMs / 60000);
+
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffMins < 1440) return `${Math.round(diffMins / 60)}h ago`;
+        return date.toLocaleDateString();
+    };
+
+    // Click outside to close dropdowns
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (controlsRef.current && !controlsRef.current.contains(e.target)) {
+                setNotifOpen(false);
+                setProfileOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Toggle notification dropdown (close profile if open)
+    const toggleNotifications = () => {
+        setNotifOpen(!notifOpen);
+        setProfileOpen(false);
+    };
+
+    // Toggle profile dropdown (close notifications if open)
+    const toggleProfile = () => {
+        setProfileOpen(!profileOpen);
+        setNotifOpen(false);
+    };
+
+    // Handle logout
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        navigate('/login');
+        window.location.reload();
+    };
 
     return (
         <header className={styles.topbar}>
@@ -18,17 +108,83 @@ const Topbar = () => {
             </button>
 
             <div className={styles.actions}>
-                <div className={styles.balance}>
-                    <span className={styles.balanceLabel}>Total Balance</span>
-                    <span className={styles.balanceValue}>$1,420.69</span>
+                {/* Balance Zone */}
+                <div className={styles.balanceContainer}>
+                    <Wallet size={16} className={styles.balanceIcon} />
+                    <div className={styles.balance}>
+                        <span className={styles.balanceLabel}>Total Balance</span>
+                        <span className={styles.balanceValue}>$1,420.69</span>
+                    </div>
                 </div>
 
-                <button className={styles.iconBtn}>
-                    <Bell size={20} color="var(--text-secondary)" />
-                </button>
+                {/* Divider */}
+                <div className={styles.divider} />
 
-                <div className={styles.avatar}>
-                    U
+                {/* Controls Zone */}
+                <div className={styles.controls} ref={controlsRef}>
+                    {/* Notification Button */}
+                    <div className={styles.dropdownWrapper}>
+                        <button
+                            className={styles.notificationBtn}
+                            aria-label="Notifications"
+                            type="button"
+                            onClick={toggleNotifications}
+                        >
+                            <Bell size={20} />
+                            {unreadCount > 0 && (
+                                <span className={styles.notificationBadge}>
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                            )}
+                        </button>
+                        {notifOpen && (
+                            <div className={styles.dropdown}>
+                                <div className={styles.dropdownHeader}>Notifications</div>
+                                {notifications.length > 0 ? (
+                                    notifications.map((notif) => (
+                                        <div key={notif.id} className={styles.dropdownItem}>
+                                            <span className={styles.notifMessage}>{notif.message}</span>
+                                            <span className={styles.notifTime}>{notif.time}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className={styles.dropdownEmpty}>No new notifications</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Profile Button */}
+                    <div className={styles.dropdownWrapper}>
+                        <button
+                            className={styles.profileBtn}
+                            aria-label="User menu"
+                            type="button"
+                            onClick={toggleProfile}
+                        >
+                            <div className={styles.avatar}>
+                                <User size={18} />
+                            </div>
+                            <ChevronDown size={14} className={`${styles.chevron} ${profileOpen ? styles.chevronOpen : ''}`} />
+                        </button>
+                        {profileOpen && (
+                            <div className={styles.dropdown}>
+                                <Link to="/profile" className={styles.dropdownItem} onClick={() => setProfileOpen(false)}>
+                                    <User size={16} />
+                                    <span>Profile</span>
+                                </Link>
+                                <Link to="/profile" className={styles.dropdownItem} onClick={() => setProfileOpen(false)}>
+                                    <Settings size={16} />
+                                    <span>Settings</span>
+                                </Link>
+                                <div className={styles.dropdownDivider} />
+                                <button className={styles.dropdownItem} onClick={handleLogout}>
+                                    <LogOut size={16} />
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </header>
@@ -36,4 +192,3 @@ const Topbar = () => {
 };
 
 export default Topbar;
-

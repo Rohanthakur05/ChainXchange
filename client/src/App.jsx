@@ -14,6 +14,7 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import Dashboard from './pages/Dashboard';
 import Trade from './pages/Trade';
+import Terminal from './pages/Terminal';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -52,6 +53,9 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/markets" />} />
                 <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/markets" />} />
+
+                {/* Terminal - Full Screen, No Sidebar */}
+                <Route path="/terminal/:id" element={user ? <Terminal /> : <Navigate to="/login" />} />
 
                 {/* Dashboard Routes - Protected */}
                 <Route element={user ? <DashboardLayout /> : <Navigate to="/login" />}>

@@ -10,5 +10,6 @@ router.post('/signup', AuthController.signup);
 router.post('/login', AuthController.login);
 router.get('/logout', AuthController.logout);
 router.get('/profile', isAuthenticated, AuthController.getProfile);
+router.post('/watchlist/toggle', isAuthenticated, AuthController.toggleWatchlist);
 
 module.exports = router;

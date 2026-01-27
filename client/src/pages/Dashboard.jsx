@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../utils/api';
 import Badge from '../components/ui/Badge/Badge';
+import WatchlistWidget from '../components/dashboard/WatchlistWidget';
 import styles from './Dashboard.module.css';
 
 const Dashboard = () => {
@@ -30,11 +31,23 @@ const Dashboard = () => {
     }, []);
 
     // Memoize data splitting to prevent unnecessary re-calculations
-    const { top8Coins, remainingCoins } = useMemo(() => {
-        return {
-            top8Coins: coins.slice(0, 8),
-            remainingCoins: coins.slice(8)
-        };
+    const { top8Coins, topGainers, topLosers } = useMemo(() => {
+        const top8 = coins.slice(0, 8);
+        const remaining = coins.slice(8);
+
+        // Top Gainers: positive change, sorted highest first
+        const gainers = remaining
+            .filter(c => (c.price_change_percentage_24h || 0) > 0)
+            .sort((a, b) => b.price_change_percentage_24h - a.price_change_percentage_24h)
+            .slice(0, 10);
+
+        // Top Losers: negative change, sorted lowest first
+        const losers = remaining
+            .filter(c => (c.price_change_percentage_24h || 0) < 0)
+            .sort((a, b) => a.price_change_percentage_24h - b.price_change_percentage_24h)
+            .slice(0, 10);
+
+        return { top8Coins: top8, topGainers: gainers, topLosers: losers };
     }, [coins]);
 
     // Loading State
@@ -88,56 +101,67 @@ const Dashboard = () => {
                 <p className={styles.subtitle}>Real-time market overview and top performing assets</p>
             </header>
 
-            {/* Section 1: Top 8 Coins - Grid Layout */}
-            <section className={styles.topCoinsSection} aria-label="Top 8 Cryptocurrencies">
-                <h2 className={styles.sectionTitle}>Market Leaders</h2>
-                <div className={styles.topCoinsGrid}>
-                    {top8Coins.map((coin) => (
-                        <Link
-                            key={coin.id}
-                            to={`/markets/${coin.id}`}
-                            className={styles.gridCard}
-                        >
-                            <div className={styles.cardHeader}>
-                                <img
-                                    src={coin.image}
-                                    alt={coin.name}
-                                    className={styles.coinIcon}
-                                />
-                                <div className={styles.coinInfo}>
-                                    <span className={styles.coinName}>{coin.name}</span>
-                                    <span className={styles.coinSymbol}>{coin.symbol.toUpperCase()}</span>
-                                </div>
-                            </div>
-                            <div className={styles.cardBody}>
-                                <div className={styles.priceRow}>
-                                    <span className={styles.price}>
-                                        ${coin.current_price?.toLocaleString()}
-                                    </span>
-                                </div>
-                                <div className={styles.changeRow}>
-                                    <Badge variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}>
-                                        {(coin.price_change_percentage_24h || 0) >= 0 ? (
-                                            <TrendingUp size={12} style={{ marginRight: 4 }} />
-                                        ) : (
-                                            <TrendingDown size={12} style={{ marginRight: 4 }} />
-                                        )}
-                                        {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
-                                        {(coin.price_change_percentage_24h || 0).toFixed(2)}%
-                                    </Badge>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
+            {/* Top Section: Watchlist + Market Leaders */}
+            <div className={styles.topSection}>
+                <div className={styles.watchlistColumn}>
+                    <WatchlistWidget />
                 </div>
-            </section>
 
-            {/* Section 2: Remaining Coins - Horizontal Scroll */}
-            {remainingCoins.length > 0 && (
-                <section className={styles.remainingCoinsSection} aria-label="Other Cryptocurrencies">
-                    <h2 className={styles.sectionTitle}>All Other Assets</h2>
+                <section className={styles.leadersColumn} aria-label="Top 8 Cryptocurrencies">
+                    <h2 className={styles.sectionTitle}>Market Leaders</h2>
+                    <div className={styles.topCoinsGrid}>
+                        {top8Coins.map((coin) => (
+                            <Link
+                                key={coin.id}
+                                to={`/markets/${coin.id}`}
+                                className={styles.gridCard}
+                            >
+                                <div className={styles.cardHeader}>
+                                    <img
+                                        src={coin.image}
+                                        alt={coin.name}
+                                        className={styles.coinIcon}
+                                    />
+                                    <div className={styles.coinInfo}>
+                                        <span className={styles.coinName}>{coin.name}</span>
+                                        <span className={styles.coinSymbol}>{coin.symbol.toUpperCase()}</span>
+                                    </div>
+                                </div>
+                                <div className={styles.cardBody}>
+                                    <div className={styles.priceRow}>
+                                        <span className={styles.price}>
+                                            ${coin.current_price?.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className={styles.changeRow}>
+                                        <Badge variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}>
+                                            {(coin.price_change_percentage_24h || 0) >= 0 ? (
+                                                <TrendingUp size={12} style={{ marginRight: 4 }} />
+                                            ) : (
+                                                <TrendingDown size={12} style={{ marginRight: 4 }} />
+                                            )}
+                                            {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
+                                            {(coin.price_change_percentage_24h || 0).toFixed(2)}%
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            </div>
+
+            {/* Section 2: Top Gainers */}
+            {topGainers.length > 0 && (
+                <section className={styles.segmentedSection} aria-label="Top Gainers">
+                    <div className={styles.sectionHeader}>
+                        <div className={styles.sectionTitleGroup}>
+                            <TrendingUp size={18} className={styles.sectionIconGain} />
+                            <h2 className={styles.sectionTitle}>Top Gainers</h2>
+                        </div>
+                    </div>
                     <div className={styles.horizontalScroll}>
-                        {remainingCoins.map((coin) => (
+                        {topGainers.map((coin) => (
                             <Link
                                 key={coin.id}
                                 to={`/markets/${coin.id}`}
@@ -157,11 +181,46 @@ const Dashboard = () => {
                                 <div className={styles.compactPrice}>
                                     ${coin.current_price?.toLocaleString()}
                                 </div>
-                                <Badge
-                                    variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}
-                                    className={styles.compactBadge}
-                                >
-                                    {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
+                                <Badge variant="success" className={styles.compactBadge}>
+                                    +{(coin.price_change_percentage_24h || 0).toFixed(2)}%
+                                </Badge>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Section 3: Top Losers */}
+            {topLosers.length > 0 && (
+                <section className={styles.segmentedSection} aria-label="Top Losers">
+                    <div className={styles.sectionHeader}>
+                        <div className={styles.sectionTitleGroup}>
+                            <TrendingDown size={18} className={styles.sectionIconLoss} />
+                            <h2 className={styles.sectionTitle}>Top Losers</h2>
+                        </div>
+                    </div>
+                    <div className={styles.horizontalScroll}>
+                        {topLosers.map((coin) => (
+                            <Link
+                                key={coin.id}
+                                to={`/markets/${coin.id}`}
+                                className={styles.compactCard}
+                            >
+                                <div className={styles.compactHeader}>
+                                    <img
+                                        src={coin.image}
+                                        alt={coin.name}
+                                        className={styles.compactIcon}
+                                        loading="lazy"
+                                    />
+                                    <span className={styles.compactSymbol}>
+                                        {coin.symbol.toUpperCase()}
+                                    </span>
+                                </div>
+                                <div className={styles.compactPrice}>
+                                    ${coin.current_price?.toLocaleString()}
+                                </div>
+                                <Badge variant="danger" className={styles.compactBadge}>
                                     {(coin.price_change_percentage_24h || 0).toFixed(2)}%
                                 </Badge>
                             </Link>
