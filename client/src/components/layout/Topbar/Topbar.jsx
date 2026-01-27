@@ -1,35 +1,21 @@
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Search, Bell } from 'lucide-react';
-import Input from '../../ui/Input/Input';
+import { useGlobalSearch } from '../../../context/GlobalSearchContext';
 import styles from './Topbar.module.css';
 
 const Topbar = () => {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const searchQuery = searchParams.get('search') || '';
-
-    const handleSearchChange = (e) => {
-        const value = e.target.value;
-        setSearchParams(prev => {
-            if (value) {
-                prev.set('search', value);
-            } else {
-                prev.delete('search');
-            }
-            return prev;
-        }, { replace: true });
-    };
+    const { openSearch } = useGlobalSearch();
 
     return (
         <header className={styles.topbar}>
-            <div className={styles.search}>
-                <Input
-                    placeholder="Search stocks, crypto..."
-                    icon={<Search size={16} />}
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                />
-            </div>
+            <button
+                className={styles.searchTrigger}
+                onClick={openSearch}
+                type="button"
+            >
+                <Search size={16} />
+                <span>Search cryptocurrencies...</span>
+            </button>
 
             <div className={styles.actions}>
                 <div className={styles.balance}>
@@ -50,3 +36,4 @@ const Topbar = () => {
 };
 
 export default Topbar;
+

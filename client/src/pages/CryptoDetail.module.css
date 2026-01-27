@@ -56,6 +56,50 @@
     position: relative;
 }
 
+.chartLoading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+}
+
+/* Timeframe Selector */
+.timeframeSelector {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.timeframeBtn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.timeframeBtn:hover:not(:disabled) {
+    background: var(--bg-card-hover);
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.timeframeBtn.active {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: white;
+}
+
+.timeframeBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Order Book */
 .orderBook {
     grid-column: 2 / 3;
@@ -138,9 +182,17 @@
     color: white;
 }
 
-.tradeTab.sell.active {
-    background-color: var(--color-sell);
+.tradeTab.active {
+    background-color: var(--color-brand);
     color: white;
+}
+
+.tradePanel.buy .tradeTab.active {
+    background-color: var(--color-buy);
+}
+
+.tradePanel.sell .tradeTab.active {
+    background-color: var(--color-sell);
 }
 
 .tradeForm {
@@ -163,6 +215,71 @@
     margin-top: 1rem;
     font-size: 0.9rem;
     color: var(--text-secondary);
+}
+
+/* Balance Display */
+.balanceDisplay {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.balanceValue {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Order Confirmation */
+.orderConfirmation {
+    padding: 1rem 0;
+}
+
+.confirmTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.orderSummary {
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summaryRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 0.95rem;
+}
+
+.summaryRow span {
+    color: var(--text-secondary);
+}
+
+.summaryRow strong {
+    color: var(--text-primary);
+}
+
+.buyText {
+    color: var(--color-buy);
+}
+
+.sellText {
+    color: var(--color-sell);
+}
+
+.confirmActions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 /* Recent Trades */

@@ -12,8 +12,29 @@
     z-index: 40;
 }
 
-.search {
+.searchTrigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     width: 300px;
+    padding: 10px 14px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.searchTrigger:hover {
+    border-color: var(--border-default);
+    background-color: var(--bg-tertiary);
+}
+
+.searchTrigger span {
+    flex: 1;
+    text-align: left;
 }
 
 .actions {
