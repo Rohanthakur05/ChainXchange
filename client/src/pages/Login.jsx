@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import styles from './Auth.module.css';
 
-const Login = () => {
+const Login = ({ onLoginSuccess }) => {
     const [formData, setFormData] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -15,9 +16,13 @@ const Login = () => {
 
         try {
             await api.post('/auth/login', formData);
-            window.location.href = '/markets';
+            // Trigger auth re-check in App.jsx instead of full reload
+            if (onLoginSuccess) {
+                await onLoginSuccess();
+            }
+            navigate('/markets', { replace: true });
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed. Please try again.');
+            setError(err.userMessage || err.response?.data?.error || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -67,3 +72,4 @@ const Login = () => {
 };
 
 export default Login;
+

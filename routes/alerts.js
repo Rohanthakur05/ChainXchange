@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Alert = require('../models/Alert');
-const auth = require('../middleware/auth');
+const { isAuthenticated: auth } = require('../middleware/auth');
 
 // @route   POST /api/alerts
 // @desc    Create a new alert

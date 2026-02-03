@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LineChart, CandlestickChart, Bell, SlidersHorizontal, Maximize2 } from 'lucide-react';
+import { LineChart, CandlestickChart, Bell, SlidersHorizontal, Maximize2, Star } from 'lucide-react';
 import api from '../utils/api';
+import { useWallet } from '../context/WalletContext';
 import Button from '../components/ui/Button/Button';
 import Input from '../components/ui/Input/Input';
 import Badge from '../components/ui/Badge/Badge';
 import TradingViewChart from '../components/charts/TradingViewChart';
 import CreateAlertModal from '../components/alerts/CreateAlertModal';
 import IndicatorsPanel from '../components/charts/IndicatorsPanel';
+import WatchlistManager from '../components/dashboard/WatchlistManager';
 import styles from './CryptoDetail.module.css';
 
 const OrderRow = ({ price, amount, type }) => (
@@ -62,8 +64,15 @@ const CryptoDetail = () => {
     const [tradeType, setTradeType] = useState('buy');
     const [quantity, setQuantity] = useState('');
     const [message, setMessage] = useState(null);
-    const [wallet, setWallet] = useState(null);
-    const [holdings, setHoldings] = useState(null);
+
+    // Use global wallet context for single source of truth
+    const { wallet, getCoinHoldings, executeBuy, executeSell, syncWallet, loading: walletLoading } = useWallet();
+    const holdings = getCoinHoldings(id);
+
+    // Debug: Log wallet values from context
+    console.log('[CryptoDetail] Wallet from context:', wallet, 'Loading:', walletLoading);
+
+    const [loading, setLoading] = useState(true);
     const [orderPreview, setOrderPreview] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [timeframe, setTimeframe] = useState('24h');
@@ -71,6 +80,7 @@ const CryptoDetail = () => {
     const [chartMode, setChartMode] = useState('graph'); // 'graph' | 'tradingview'
     const [alertModalOpen, setAlertModalOpen] = useState(false);
     const [indicatorsPanelOpen, setIndicatorsPanelOpen] = useState(false);
+    const [watchlistModalOpen, setWatchlistModalOpen] = useState(false);
 
     // Load indicators from localStorage (user's explicit choices)
     const [activeIndicators, setActiveIndicators] = useState(() => {
@@ -100,27 +110,6 @@ const CryptoDetail = () => {
         return [...new Set(activeIndicators.map(id => map[id]).filter(Boolean))];
     }, [activeIndicators]);
 
-    // Fetch wallet balance
-    const fetchWallet = async () => {
-        try {
-            const response = await api.get('/auth/profile');
-            setWallet(response.data.user.wallet || 0);
-        } catch (err) {
-            console.error('Failed to fetch wallet', err);
-        }
-    };
-
-    // Fetch user holdings for this coin
-    const fetchHoldings = async () => {
-        try {
-            const response = await api.get('/crypto/portfolio');
-            const userHolding = response.data.holdings?.find(h => h.coinId === id);
-            setHoldings(userHolding || null);
-        } catch (err) {
-            console.error('Failed to fetch holdings', err);
-        }
-    };
-
     // Load chart data based on timeframe
     const loadChartData = async (tf) => {
         setChartLoading(true);
@@ -140,21 +129,22 @@ const CryptoDetail = () => {
         }
     };
 
-    // Initial data fetch
+    // Initial coin data fetch (wallet handled by WalletContext)
     useEffect(() => {
         const fetchCoinData = async () => {
             if (!id) return;
+            setLoading(true);
             try {
                 const response = await api.get(`/crypto/detail/${id}`);
                 setCoin(response.data.coin);
             } catch (err) {
                 console.error("Error fetching coin data", err);
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchCoinData();
-        fetchWallet();
-        fetchHoldings();
     }, [id]);
 
     // Load chart when timeframe changes
@@ -233,9 +223,9 @@ const CryptoDetail = () => {
 
     const confirmOrder = async () => {
         setSubmitting(true);
+        const totalCostValue = orderPreview.quantity * orderPreview.price;
 
         try {
-            // Minimum delay to feel real
             const endpoint = tradeType === 'buy' ? '/crypto/buy' : '/crypto/sell';
             const [result] = await Promise.all([
                 api.post(endpoint, {
@@ -246,6 +236,13 @@ const CryptoDetail = () => {
                 new Promise(resolve => setTimeout(resolve, 500))
             ]);
 
+            // Optimistic update via global context
+            if (tradeType === 'buy') {
+                executeBuy(coin.id, orderPreview.quantity, totalCostValue);
+            } else {
+                executeSell(coin.id, orderPreview.quantity, totalCostValue);
+            }
+
             setMessage({
                 type: 'success',
                 text: `Successfully ${tradeType === 'buy' ? 'bought' : 'sold'} ${orderPreview.quantity} ${coin.symbol.toUpperCase()} at $${coin.current_price.toLocaleString()}`
@@ -254,16 +251,14 @@ const CryptoDetail = () => {
             setOrderPreview(null);
             setQuantity('');
 
-            // Refresh wallet and holdings
-            await Promise.all([
-                fetchWallet(),
-                fetchHoldings()
-            ]);
+            // Sync with server to ensure consistency
+            syncWallet();
         } catch (err) {
-            // ✅ FIXED: Correct error message
+            // Handle error - backend uses 'error' field, fallback to 'message'
+            const errorMsg = err.response?.data?.error || err.response?.data?.message || err.userMessage;
             setMessage({
                 type: 'error',
-                text: err.response?.data?.message || `${tradeType} order failed. Please try again.`
+                text: errorMsg || `${tradeType} order failed. Please try again.`
             });
         } finally {
             setSubmitting(false);
@@ -322,6 +317,13 @@ const CryptoDetail = () => {
                             title="Set Price Alert"
                         >
                             <Bell size={18} />
+                        </button>
+                        <button
+                            className={styles.alertBtn}
+                            onClick={() => setWatchlistModalOpen(true)}
+                            title="Add to Watchlist"
+                        >
+                            <Star size={18} />
                         </button>
                     </div>
                 </div>
@@ -490,61 +492,41 @@ const CryptoDetail = () => {
                         <div className={styles.balanceDisplay}>
                             <span>Available Balance</span>
                             <span className={styles.balanceValue}>
-                                {tradeType === 'buy'
-                                    ? `$${wallet?.toLocaleString() || '0.00'}`
-                                    : `${holdings?.quantity || '0'} ${coin.symbol.toUpperCase()}`
+                                {walletLoading ? 'Loading...' :
+                                    tradeType === 'buy'
+                                        ? `$${wallet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                        : `${holdings?.quantity?.toFixed(8) || '0'} ${coin.symbol.toUpperCase()}`
                                 }
                             </span>
                         </div>
 
-                        <Input label="Price (USD)" value={coin.current_price} disabled />
+                        <Input label="Price (USD)" value={coin.current_price.toLocaleString()} disabled />
                         <Input
                             label={`Amount (${coin.symbol.toUpperCase()})`}
                             type="number"
                             step="any"
+                            min="0"
                             value={quantity}
                             onChange={(e) => setQuantity(e.target.value)}
                             placeholder="0.00"
                         />
 
-                        <div className={styles.sliderContainer}>
-                            <input
-                                type="range"
-                                className={styles.rangeInput}
-                                min="0"
-                                max="100"
-                                onChange={(e) => {
-                                    const percent = e.target.value / 100;
-                                    if (tradeType === 'buy') {
-                                        const maxQty = wallet / coin.current_price;
-                                        setQuantity((maxQty * percent).toFixed(8));
-                                    } else {
-                                        const maxQty = holdings?.quantity || 0;
-                                        setQuantity((maxQty * percent).toFixed(8));
-                                    }
-                                }}
-                            />
-                            <div className={styles.summary} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>0%</span>
-                                <span>50%</span>
-                                <span>100%</span>
-                            </div>
-                        </div>
-
                         <div style={{ gridColumn: '1 / -1' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.9rem' }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>Total Estimate:</span>
-                                <span style={{ fontWeight: 600 }}>${totalCost.toLocaleString()}</span>
+                                <span style={{ fontWeight: 600 }}>${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <Button
+                                type="submit"
                                 block
                                 size="lg"
                                 variant={tradeType === 'buy' ? 'primary' : 'danger'}
-                                disabled={!quantity || submitting || (tradeType === 'buy' && totalCost > wallet)}
+                                disabled={!quantity || parseFloat(quantity) <= 0 || submitting || walletLoading || loading || (tradeType === 'buy' && totalCost > wallet)}
                             >
-                                {!wallet ? 'Loading...' :
-                                    tradeType === 'buy' && totalCost > wallet ? 'Insufficient Funds' :
-                                        `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${coin.symbol.toUpperCase()}`}
+                                {walletLoading || loading ? 'Loading...' :
+                                    submitting ? 'Processing...' :
+                                        tradeType === 'buy' && totalCost > wallet ? 'Insufficient Funds' :
+                                            `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${coin.symbol.toUpperCase()}`}
                             </Button>
                             {message && (
                                 <div style={{
@@ -660,6 +642,19 @@ const CryptoDetail = () => {
                     );
                 }}
             />
+
+            {/* Watchlist Manager Modal */}
+            {watchlistModalOpen && (
+                <div className={styles.modalOverlay} onClick={() => setWatchlistModalOpen(false)}>
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <WatchlistManager
+                            coinId={coin.id}
+                            coinName={coin.name}
+                            onClose={() => setWatchlistModalOpen(false)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -9,7 +9,7 @@ class PaymentController {
         try {
             const userId = req.cookies.user;
             const user = await User.findById(userId).lean();
-            
+
             if (!user) {
                 return res.redirect('/auth/login');
             }
@@ -51,59 +51,123 @@ class PaymentController {
     }
 
     /**
-     * Process add money
+     * Process add money - supports UPI, Card, Bank Transfer
      */
     static async addMoney(req, res) {
         try {
             const userId = req.cookies.user;
-            const { amount, cardNumber, cardHolder, expiryDate, cvv } = req.body;
+            const {
+                amount,
+                paymentMethod,
+                // UPI fields
+                upiId,
+                // Card fields
+                cardNumber, cardExpiry, cardCvv, cardHolder,
+                // Bank fields
+                bankAccount, bankIfsc, bankName, bankHolder
+            } = req.body;
 
-            // Validate input
-            if (!amount || !cardNumber || !cardHolder || !expiryDate || !cvv) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'All fields are required' 
+            // Validate amount
+            if (!amount) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Amount is required'
                 });
             }
 
             const amountNum = parseFloat(amount);
             if (isNaN(amountNum) || amountNum <= 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Invalid amount' 
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid amount. Must be a positive number.'
                 });
             }
 
-            // Mask card number (show only last 4 digits)
-            const maskedCardNumber = '**** **** **** ' + cardNumber.slice(-4);
+            if (amountNum > 100000) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Maximum single deposit is $100,000'
+                });
+            }
+
+            // Determine payment method and validate
+            const method = paymentMethod || 'instant';
+            let paymentDetails = {};
+
+            switch (method) {
+                case 'upi':
+                    if (!upiId || !/^[\w.-]+@[\w]+$/.test(upiId)) {
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Valid UPI ID is required'
+                        });
+                    }
+                    paymentDetails = { upiId };
+                    break;
+
+                case 'card':
+                    if (!cardNumber || !cardExpiry || !cardCvv || !cardHolder) {
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Complete card details are required'
+                        });
+                    }
+                    paymentDetails = {
+                        cardNumber: '**** **** **** ' + cardNumber.slice(-4),
+                        cardHolder
+                    };
+                    break;
+
+                case 'bank':
+                    if (!bankAccount || !bankIfsc || !bankHolder) {
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Complete bank details are required'
+                        });
+                    }
+                    paymentDetails = {
+                        bankAccount: '****' + bankAccount.slice(-4),
+                        bankIfsc,
+                        bankName: bankName || 'Bank Transfer',
+                        bankHolder
+                    };
+                    break;
+
+                default:
+                    paymentDetails = { method: 'Instant Top-up' };
+            }
 
             // Create payment transaction record
             const paymentTx = new PaymentTransaction({
                 userId,
                 type: 'deposit',
                 amount: amountNum,
-                cardNumber: maskedCardNumber,
-                cardHolder,
+                paymentMethod: method,
+                ...paymentDetails,
                 status: 'completed'
             });
 
             await paymentTx.save();
 
             // Update user wallet balance
-            await User.findByIdAndUpdate(userId, {
-                $inc: { wallet: amountNum }
-            });
+            const updatedUser = await User.findByIdAndUpdate(
+                userId,
+                { $inc: { wallet: amountNum } },
+                { new: true }
+            );
 
-            res.json({ 
-                success: true, 
-                message: 'Money added successfully',
-                newBalance: (await User.findById(userId)).wallet
+            console.log(`[Payment] User ${userId} added $${amountNum} via ${method}`);
+
+            res.json({
+                success: true,
+                message: `Successfully added $${amountNum.toLocaleString()} to wallet`,
+                wallet: updatedUser.wallet
             });
         } catch (error) {
             console.error('Add money error:', error);
-            res.status(500).json({ 
-                success: false, 
-                message: 'Error processing payment' 
+            res.status(500).json({
+                success: false,
+                error: 'Error processing payment. Please try again.'
             });
         }
     }
@@ -118,34 +182,34 @@ class PaymentController {
 
             // Validate input
             if (!amount || !cardNumber || !cardHolder || !expiryDate || !cvv) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'All fields are required' 
+                return res.status(400).json({
+                    success: false,
+                    message: 'All fields are required'
                 });
             }
 
             const amountNum = parseFloat(amount);
             if (isNaN(amountNum) || amountNum <= 0) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: 'Invalid amount' 
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid amount'
                 });
             }
 
             const user = await User.findById(userId);
-            
+
             if (!user) {
-                return res.status(404).json({ 
-                    success: false, 
-                    message: 'User not found' 
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
                 });
             }
 
             // Check if user has sufficient balance
             if (!user.wallet || user.wallet < amountNum) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: `Insufficient balance. Available: $${user.wallet || 0}` 
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient balance. Available: $${user.wallet || 0}`
                 });
             }
 
@@ -166,16 +230,16 @@ class PaymentController {
                 $inc: { wallet: -amountNum }
             });
 
-            res.json({ 
-                success: true, 
+            res.json({
+                success: true,
                 message: 'Withdrawal successful',
                 newBalance: (await User.findById(userId)).wallet
             });
         } catch (error) {
             console.error('Withdrawal error:', error);
-            res.status(500).json({ 
-                success: false, 
-                message: 'Error processing withdrawal' 
+            res.status(500).json({
+                success: false,
+                message: 'Error processing withdrawal'
             });
         }
     }

@@ -115,6 +115,13 @@
 .chartArea {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chartContainer {
+    flex: 1;
+    min-height: 0;
 }
 
 /* Order Panel */
@@ -247,4 +254,60 @@
         border-left: none;
         border-top: 1px solid var(--border-subtle);
     }
+}
+
+/* Wallet Box - Professional Balance Display */
+.walletBox {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.875rem;
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.walletIcon {
+    color: var(--color-brand);
+}
+
+.walletInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.walletLabel {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
+
+.walletValue {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.addMoneyBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--color-brand);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: white;
+    cursor: pointer;
+    margin-left: 0.25rem;
+    transition: all 0.15s;
+}
+
+.addMoneyBtn:hover {
+    background: var(--color-brand-dark, #6366f1);
+    transform: scale(1.05);
 }

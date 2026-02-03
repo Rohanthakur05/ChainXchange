@@ -6,12 +6,38 @@ export default defineConfig({
     plugins: [react()],
     server: {
         proxy: {
-            '/auth': 'http://localhost:8000',
-            '/crypto': 'http://localhost:8000',
-            '/payment': 'http://localhost:8000',
+            '/auth': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+            },
+            '/crypto': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+            },
+            '/payment': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+            },
+            '/alerts': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+            },
+            '/api': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+            },
+            '/watchlist': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+            },
+            '/health': {
+                target: 'http://localhost:8000',
+                changeOrigin: true,
+            },
             '/socket.io': {
                 target: 'http://localhost:8000',
-                ws: true
+                ws: true,
+                changeOrigin: true,
             }
         }
     }

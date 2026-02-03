@@ -318,6 +318,68 @@ class CryptoController {
     }
 
     /**
+     * Unified trade endpoint - accepts type: 'buy' | 'sell'
+     * Used by Terminal mode and any unified trading interface
+     */
+    static async executeTrade(req, res) {
+        try {
+            const { coinId, quantity, type, price } = req.body;
+            const userId = req.cookies.user;
+
+            // Validate required fields
+            if (!coinId || !quantity || !type) {
+                return res.status(400).json({
+                    error: 'Missing required fields: coinId, quantity, and type are required'
+                });
+            }
+
+            if (!['buy', 'sell'].includes(type)) {
+                return res.status(400).json({
+                    error: 'Invalid trade type. Must be "buy" or "sell"'
+                });
+            }
+
+            const quantityNum = parseFloat(quantity);
+            if (isNaN(quantityNum) || quantityNum <= 0) {
+                return res.status(400).json({ error: 'Invalid quantity' });
+            }
+
+            // Get current price if not provided
+            let currentPrice = parseFloat(price);
+            if (!currentPrice || isNaN(currentPrice)) {
+                try {
+                    const coinData = await fetchCoinGeckoDataWithCache(
+                        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`,
+                        null,
+                        `price-${coinId}`,
+                        60 * 1000 // 1 minute cache
+                    );
+                    currentPrice = coinData?.[coinId]?.usd || 0;
+                } catch (err) {
+                    currentPrice = getBasePriceForCoin(coinId); // Fallback
+                }
+            }
+
+            if (!currentPrice || currentPrice <= 0) {
+                return res.status(400).json({ error: 'Unable to determine current price' });
+            }
+
+            // Modify request body for delegation
+            req.body.price = currentPrice;
+
+            // Delegate to appropriate method
+            if (type === 'buy') {
+                return CryptoController.buyCrypto(req, res);
+            } else {
+                return CryptoController.sellCrypto(req, res);
+            }
+        } catch (error) {
+            console.error('Trade execution error:', error);
+            res.status(500).json({ error: error.message || 'Trade failed' });
+        }
+    }
+
+    /**
      * Get user portfolio
      */
     static async getPortfolio(req, res) {

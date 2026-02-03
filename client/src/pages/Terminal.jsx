@@ -1,11 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { X, Maximize2, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Wallet, Plus } from 'lucide-react';
 import api from '../utils/api';
+import { useWallet } from '../context/WalletContext';
 import TradingViewChart from '../components/charts/TradingViewChart';
+import ChartToolbar from '../components/charts/ChartToolbar/ChartToolbar';
+import IndicatorsPanel from '../components/indicators/IndicatorsPanel/IndicatorsPanel';
+import { getIndicatorById } from '../config/INDICATORS_CONFIG';
 import Badge from '../components/ui/Badge/Badge';
 import Button from '../components/ui/Button/Button';
 import Input from '../components/ui/Input/Input';
+import AddMoneyModal from '../components/wallet/AddMoneyModal';
 import styles from './Terminal.module.css';
 
 /**
@@ -26,21 +31,51 @@ const Terminal = () => {
     const [loading, setLoading] = useState(true);
     const [tradeType, setTradeType] = useState('buy');
     const [quantity, setQuantity] = useState('');
-    const [wallet, setWallet] = useState(0);
     const [holdings, setHoldings] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState(null);
+    const [addMoneyOpen, setAddMoneyOpen] = useState(false);
 
-    // Load indicators from localStorage (user's explicit choices)
-    const [studies, setStudies] = useState(() => {
-        const saved = localStorage.getItem(`terminal_studies_${id}`);
+    // Use global wallet context for single source of truth
+    const { wallet, syncWallet, loading: walletLoading } = useWallet();
+
+    // Indicators panel state
+    const [indicatorsPanelOpen, setIndicatorsPanelOpen] = useState(false);
+
+    // Timeframe state
+    const [timeframe, setTimeframe] = useState('D');
+
+    // Load active indicators from localStorage (user's explicit choices)
+    const [activeIndicators, setActiveIndicators] = useState(() => {
+        const saved = localStorage.getItem(`terminal_indicators_${id}`);
         return saved ? JSON.parse(saved) : [];
     });
 
-    // Save studies when they change
+    // Convert active indicator IDs to TradingView study IDs
+    const studies = activeIndicators
+        .map(id => getIndicatorById(id)?.studyId)
+        .filter(Boolean);
+
+    // Save indicators when they change
     useEffect(() => {
-        localStorage.setItem(`terminal_studies_${id}`, JSON.stringify(studies));
-    }, [studies, id]);
+        localStorage.setItem(`terminal_indicators_${id}`, JSON.stringify(activeIndicators));
+    }, [activeIndicators, id]);
+
+    // Toggle indicator (add/remove)
+    const handleToggleIndicator = useCallback((indicatorId) => {
+        setActiveIndicators(prev => {
+            if (prev.includes(indicatorId)) {
+                return prev.filter(id => id !== indicatorId);
+            } else {
+                return [...prev, indicatorId];
+            }
+        });
+    }, []);
+
+    // Remove single indicator
+    const handleRemoveIndicator = useCallback((indicatorId) => {
+        setActiveIndicators(prev => prev.filter(id => id !== indicatorId));
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -53,11 +88,7 @@ const Terminal = () => {
                 const foundCoin = coins.find(c => c.id === id);
                 setCoin(foundCoin);
 
-                // Fetch wallet
-                const profileResponse = await api.get('/auth/profile');
-                setWallet(profileResponse.data?.user?.wallet || 0);
-
-                // Fetch holdings
+                // Holdings for this specific coin
                 const portfolioResponse = await api.get('/crypto/portfolio');
                 const userHolding = portfolioResponse.data?.holdings?.find(h => h.coinId === id);
                 setHoldings(userHolding || null);
@@ -87,9 +118,10 @@ const Terminal = () => {
             setMessage({ type: 'success', text: `${tradeType === 'buy' ? 'Bought' : 'Sold'} successfully!` });
             setQuantity('');
 
-            // Refresh wallet and holdings
-            const profileResponse = await api.get('/auth/profile');
-            setWallet(profileResponse.data?.user?.wallet || 0);
+            // Sync wallet globally (updates header, trade panels, everywhere)
+            await syncWallet();
+
+            // Refresh holdings for this specific coin
             const portfolioResponse = await api.get('/crypto/portfolio');
             const userHolding = portfolioResponse.data?.holdings?.find(h => h.coinId === id);
             setHoldings(userHolding || null);
@@ -147,19 +179,44 @@ const Terminal = () => {
                     </Badge>
                 </div>
                 <div className={styles.headerRight}>
-                    <span className={styles.balance}>Balance: ${wallet.toLocaleString()}</span>
+                    <div className={styles.walletBox}>
+                        <Wallet size={16} className={styles.walletIcon} />
+                        <div className={styles.walletInfo}>
+                            <span className={styles.walletLabel}>Balance</span>
+                            <span className={styles.walletValue}>
+                                {walletLoading ? '...' : `$${wallet.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                            </span>
+                        </div>
+                        <button
+                            className={styles.addMoneyBtn}
+                            onClick={() => setAddMoneyOpen(true)}
+                            title="Add Money"
+                        >
+                            <Plus size={14} />
+                        </button>
+                    </div>
                 </div>
             </header>
 
             {/* Main Content */}
             <div className={styles.content}>
-                {/* Chart Area */}
+                {/* Chart Area with Toolbar */}
                 <div className={styles.chartArea}>
-                    <TradingViewChart
-                        symbol={coin.symbol}
-                        theme="dark"
-                        studies={studies}
+                    <ChartToolbar
+                        timeframe={timeframe}
+                        onTimeframeChange={setTimeframe}
+                        activeIndicators={activeIndicators}
+                        onOpenIndicators={() => setIndicatorsPanelOpen(true)}
+                        onRemoveIndicator={handleRemoveIndicator}
                     />
+                    <div className={styles.chartContainer}>
+                        <TradingViewChart
+                            symbol={coin.symbol}
+                            interval={timeframe}
+                            theme="dark"
+                            studies={studies}
+                        />
+                    </div>
                 </div>
 
                 {/* Order Panel */}
@@ -235,6 +292,20 @@ const Terminal = () => {
                     </form>
                 </div>
             </div>
+
+            {/* Add Money Modal */}
+            <AddMoneyModal
+                isOpen={addMoneyOpen}
+                onClose={() => setAddMoneyOpen(false)}
+            />
+
+            {/* Indicators Panel */}
+            <IndicatorsPanel
+                isOpen={indicatorsPanelOpen}
+                onClose={() => setIndicatorsPanelOpen(false)}
+                activeIndicators={activeIndicators}
+                onToggleIndicator={handleToggleIndicator}
+            />
         </div>
     );
 };

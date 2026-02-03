@@ -10,6 +10,7 @@ const Markets = () => {
     const [coins, setCoins] = useState([]);
     const [watchlist, setWatchlist] = useState([]); // Array of strings
     const [loading, setLoading] = useState(true);
+    const [togglingCoin, setTogglingCoin] = useState(null); // Track which coin is being toggled
     const [searchParams, setSearchParams] = useSearchParams();
 
     const activeFilter = searchParams.get('filter') || 'all';
@@ -40,8 +41,14 @@ const Markets = () => {
         e.preventDefault();
         e.stopPropagation();
 
+        // Prevent double-clicks
+        if (togglingCoin === coinId) return;
+
+        setTogglingCoin(coinId);
+
         // Optimistic update
         const isWatched = watchlist.includes(coinId);
+        const previousWatchlist = [...watchlist];
         let newWatchlist;
         if (isWatched) {
             newWatchlist = watchlist.filter(id => id !== coinId);
@@ -55,7 +62,9 @@ const Markets = () => {
         } catch (err) {
             console.error('Failed to toggle watchlist', err);
             // Revert on error
-            setWatchlist(watchlist);
+            setWatchlist(previousWatchlist);
+        } finally {
+            setTogglingCoin(null);
         }
     };
 
@@ -149,13 +158,20 @@ const Markets = () => {
                                     <td>
                                         <div
                                             onClick={(e) => toggleWatchlist(e, coin.id)}
-                                            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                            style={{
+                                                cursor: togglingCoin === coin.id ? 'wait' : 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                opacity: togglingCoin === coin.id ? 0.5 : 1,
+                                                transition: 'opacity 0.2s'
+                                            }}
                                             title={isWatched ? "Remove from Watchlist" : "Add to Watchlist"}
                                         >
                                             <Star
                                                 size={16}
                                                 fill={isWatched ? "#F0B90B" : "none"}
                                                 color={isWatched ? "#F0B90B" : "var(--text-secondary)"}
+                                                style={togglingCoin === coin.id ? { animation: 'pulse 0.5s infinite' } : {}}
                                             />
                                         </div>
                                     </td>

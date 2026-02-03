@@ -2,6 +2,9 @@
     display: flex;
     flex-direction: column;
     gap: 32px;
+    max-width: 100%;
+    overflow-x: hidden;
+    /* Prevent horizontal overflow */
 }
 
 .header {
@@ -23,40 +26,49 @@
     font-size: 14px;
 }
 
-/* Top Section (Watchlist + Leaders) */
+/* ===== TOP SECTION: Watchlist + Leaders ===== */
 .topSection {
     display: grid;
-    grid-template-columns: 350px 1fr;
+    grid-template-columns: 320px 1fr;
     gap: 24px;
     align-items: start;
 }
 
 .watchlistColumn {
-    /* Watchlist Widget takes full height of this column */
+    min-width: 0;
+    /* Prevent flex/grid overflow */
 }
 
-/* Coin Grid */
-.topCoinsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+.leadersColumn {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 }
 
-.gridCard {
+/* ===== CARD GRID (3-column responsive) ===== */
+.cardGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+/* ===== COIN CARD ===== */
+.card {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     padding: 16px;
     text-decoration: none;
-    transition: transform 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.gridCard:hover {
+.card:hover {
     transform: translateY(-2px);
-    border-color: var(--border-focus);
+    border-color: var(--border-focus, var(--text-muted));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .cardHeader {
@@ -66,50 +78,77 @@
 }
 
 .coinIcon {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
 }
 
 .coinInfo {
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
-.coinName {
+.coinSymbol {
     font-weight: 600;
     font-size: 14px;
     color: var(--text-primary);
 }
 
-.coinSymbol {
+.coinName {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
 }
 
 .cardBody {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .price {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     font-family: var(--font-mono);
     color: var(--text-primary);
 }
 
+/* ===== SECTIONS (Gainers/Losers) ===== */
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
 .sectionHeader {
     display: flex;
     align-items: center;
-    margin-bottom: 16px;
+    justify-content: space-between;
 }
 
 .sectionTitleGroup {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.sectionCount {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 2px 8px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
 }
 
 .sectionIconGain {
@@ -120,76 +159,30 @@
     color: var(--color-sell);
 }
 
-.sectionTitle {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-}
-
-/* Segmented Horizontal Scroll Sections */
-.segmentedSection {
-    display: flex;
-    flex-direction: column;
-    background: transparent;
-}
-
-.horizontalScroll {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    padding-bottom: 16px;
-    scroll-behavior: smooth;
-    /* Hide Scrollbar */
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-subtle) transparent;
-}
-
-.compactCard {
-    min-width: 180px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.compactCard:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-focus);
-}
-
-.compactHeader {
+/* ===== SEE MORE BUTTON ===== */
+.seeMoreBtn {
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.compactIcon {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-}
-
-.compactSymbol {
+    gap: 4px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-link);
     font-size: 13px;
-    font-weight: 600;
-    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.compactPrice {
-    font-size: 16px;
-    font-weight: 700;
-    font-family: var(--font-mono);
-    color: var(--text-primary);
+.seeMoreBtn:hover {
+    background: var(--bg-secondary);
+    border-color: var(--text-link);
 }
 
-/* Loading Skeletons */
+/* ===== LOADING SKELETONS ===== */
 .skeletonCard {
-    height: 120px;
+    height: 110px;
     background: var(--bg-card);
     border-radius: var(--radius-lg);
     animation: pulse 1.5s infinite;
@@ -209,6 +202,7 @@
     }
 }
 
+/* ===== ERROR STATE ===== */
 .errorState {
     padding: 32px;
     text-align: center;
@@ -217,17 +211,44 @@
     border-radius: var(--radius-lg);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
+/* ===== RESPONSIVE ===== */
+
+/* Tablet: 2 columns */
+@media (max-width: 1200px) {
+    .cardGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Mobile: Stack layout */
+@media (max-width: 900px) {
     .topSection {
         grid-template-columns: 1fr;
-        /* Stack visually */
     }
 
     .watchlistColumn {
         order: 2;
-        /* Move watchlist below leaders on tablet if desired, or keep above */
-        order: -1;
-        /* Keep watchlist on top */
+    }
+
+    .leadersColumn {
+        order: 1;
+    }
+}
+
+/* Small screens: Single column cards */
+@media (max-width: 640px) {
+    .cardGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .sectionHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .seeMoreBtn {
+        width: 100%;
+        justify-content: center;
     }
 }

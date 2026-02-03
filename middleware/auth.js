@@ -10,11 +10,11 @@ const isAuthenticated = async (req, res, next) => {
                 return next(); // User is authenticated, proceed to the next middleware or route handler
             }
         }
-        // If no user is found in cookies, redirect to login or send an unauthorized response
-        return res.redirect('/auth/login'); // Adjust the login route as needed
+        // Return JSON 401 for API calls (React SPA compatibility)
+        return res.status(401).json({ error: 'Authentication required. Please log in.' });
     } catch (error) {
         console.error('Authentication Middleware Error:', error);
-        return res.status(500).send('Internal Server Error');
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 

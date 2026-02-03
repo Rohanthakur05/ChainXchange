@@ -20,6 +20,17 @@ export const GlobalSearchProvider = ({ children }) => {
     const [coins, setCoins] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Define these BEFORE any useEffect that uses them (fixes TDZ error)
+    const openSearch = useCallback(() => {
+        setIsSearchOpen(true);
+        setSearchQuery('');
+    }, []);
+
+    const closeSearch = useCallback(() => {
+        setIsSearchOpen(false);
+        setSearchQuery('');
+    }, []);
+
     // Fetch coins data once on mount
     useEffect(() => {
         const fetchCoins = async () => {
@@ -77,16 +88,6 @@ export const GlobalSearchProvider = ({ children }) => {
             coin.symbol.toLowerCase().includes(query)
         );
     }, [coins, searchQuery]);
-
-    const openSearch = useCallback(() => {
-        setIsSearchOpen(true);
-        setSearchQuery('');
-    }, []);
-
-    const closeSearch = useCallback(() => {
-        setIsSearchOpen(false);
-        setSearchQuery('');
-    }, []);
 
     const value = {
         isSearchOpen,

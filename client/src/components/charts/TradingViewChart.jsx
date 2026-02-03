@@ -92,7 +92,8 @@ const TradingViewChart = memo(({
                 widgetRef.current = null;
             }
         };
-    }, [symbol, interval, theme]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [symbol, interval, theme, JSON.stringify(studies)]);
 
     return (
         <div className={styles.container} ref={containerRef}>

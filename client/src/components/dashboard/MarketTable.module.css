@@ -1,0 +1,184 @@
+.tableWrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 500px;
+}
+
+.thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-secondary);
+    z-index: 1;
+}
+
+.thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.thName {
+    width: 35%;
+}
+
+.thPrice {
+    width: 20%;
+}
+
+.thChange {
+    width: 15%;
+}
+
+.thRange {
+    width: 30%;
+}
+
+.row {
+    transition: background-color 0.15s ease;
+}
+
+.row:hover {
+    background: var(--bg-secondary);
+}
+
+.row td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+}
+
+.row:last-child td {
+    border-bottom: none;
+}
+
+/* Asset Column */
+.coinLink {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.coinLink:hover .coinSymbol {
+    color: var(--text-link);
+}
+
+.coinIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.coinInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.coinSymbol {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+    transition: color 0.15s ease;
+}
+
+.coinName {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Price Column */
+.price {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* Range Column */
+.rangeContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rangeValue {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 65px;
+}
+
+.rangeValue:last-child {
+    text-align: right;
+}
+
+.rangeBar {
+    flex: 1;
+    height: 4px;
+    background: var(--border-subtle);
+    border-radius: 2px;
+    position: relative;
+    min-width: 60px;
+}
+
+.rangeProgress {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.rangeMarker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    border: 2px solid var(--bg-card);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Empty State */
+.empty {
+    padding: 32px;
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+    .thRange,
+    .tdRange {
+        display: none;
+    }
+
+    .thName {
+        width: 50%;
+    }
+
+    .thPrice {
+        width: 25%;
+    }
+
+    .thChange {
+        width: 25%;
+    }
+}
