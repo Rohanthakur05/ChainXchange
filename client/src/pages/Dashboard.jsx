@@ -4,6 +4,8 @@ import { TrendingUp, TrendingDown, ChevronRight, ChevronUp } from 'lucide-react'
 import api from '../utils/api';
 import Badge from '../components/ui/Badge/Badge';
 import WatchlistWidget from '../components/dashboard/WatchlistWidget';
+import FearGreedWidget from '../components/dashboard/FearGreedWidget/FearGreedWidget';
+import NewsWidget from '../components/dashboard/NewsWidget/NewsWidget';
 import MarketTable from '../components/dashboard/MarketTable';
 import styles from './Dashboard.module.css';
 
@@ -141,10 +143,12 @@ const Dashboard = () => {
                 <p className={styles.subtitle}>Real-time market overview and top performing assets</p>
             </header>
 
-            {/* Top Section: Watchlist + Market Leaders */}
+            {/* Top Section: Widgets + Market Leaders */}
             <div className={styles.topSection}>
-                <div className={styles.watchlistColumn}>
+                <div className={styles.widgetsColumn}>
+                    <FearGreedWidget />
                     <WatchlistWidget />
+                    <NewsWidget />
                 </div>
 
                 <section className={styles.leadersColumn} aria-label="Market Leaders">

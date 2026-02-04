@@ -4,6 +4,7 @@ import { Star, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../utils/api';
 import Button from '../components/ui/Button/Button';
 import Badge from '../components/ui/Badge/Badge';
+import { CATEGORIES, filterCoinsByCategory, getCoinCategories } from '../config/categoryData';
 import styles from './Markets.module.css';
 
 const Markets = () => {
@@ -14,6 +15,7 @@ const Markets = () => {
     const [searchParams, setSearchParams] = useSearchParams();
 
     const activeFilter = searchParams.get('filter') || 'all';
+    const activeCategory = searchParams.get('category') || 'all';
     const searchQuery = searchParams.get('search')?.toLowerCase() || '';
 
     useEffect(() => {
@@ -79,7 +81,12 @@ const Markets = () => {
             );
         }
 
-        // 2. Apply category filter/sort
+        // 2. Apply category filter
+        if (activeCategory !== 'all') {
+            result = filterCoinsByCategory(result, activeCategory);
+        }
+
+        // 3. Apply main filter/sort
         if (activeFilter === 'watchlist') {
             result = result.filter(coin => watchlist.includes(coin.id));
         } else if (activeFilter === 'gainers') {
@@ -89,7 +96,7 @@ const Markets = () => {
         }
 
         return result;
-    }, [coins, activeFilter, searchQuery, watchlist]);
+    }, [coins, activeFilter, activeCategory, searchQuery, watchlist]);
 
     const handleFilterChange = (filter) => {
         setSearchParams(prev => {
@@ -97,6 +104,17 @@ const Markets = () => {
                 prev.delete('filter');
             } else {
                 prev.set('filter', filter);
+            }
+            return prev;
+        }, { replace: true });
+    };
+
+    const handleCategoryChange = (category) => {
+        setSearchParams(prev => {
+            if (category === 'all') {
+                prev.delete('category');
+            } else {
+                prev.set('category', category);
             }
             return prev;
         }, { replace: true });
@@ -136,6 +154,20 @@ const Markets = () => {
                 >
                     <Star size={14} style={{ marginRight: 6 }} />Watchlist
                 </button>
+            </div>
+
+            {/* Category Filters */}
+            <div className={styles.categoryFilters}>
+                {Object.entries(CATEGORIES).map(([key, cat]) => (
+                    <button
+                        key={key}
+                        className={`${styles.categoryBtn} ${activeCategory === key ? styles.activeCat : ''}`}
+                        onClick={() => handleCategoryChange(key)}
+                    >
+                        <span className={styles.categoryIcon}>{cat.icon}</span>
+                        {cat.name}
+                    </button>
+                ))}
             </div>
 
             <div className={styles.tableContainer}>

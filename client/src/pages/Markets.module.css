@@ -127,3 +127,54 @@
         display: none;
     }
 }
+
+/* ===== CATEGORY FILTERS ===== */
+.categoryFilters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+}
+
+.categoryFilters::-webkit-scrollbar {
+    height: 4px;
+}
+
+.categoryFilters::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 2px;
+}
+
+.categoryBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid transparent;
+    padding: 6px 12px;
+    border-radius: var(--radius-full, 9999px);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.categoryBtn:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.categoryBtn.activeCat {
+    background: var(--text-link);
+    color: white;
+    border-color: var(--text-link);
+}
+
+.categoryIcon {
+    font-size: 14px;
+    line-height: 1;
+}

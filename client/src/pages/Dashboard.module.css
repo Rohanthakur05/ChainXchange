@@ -26,15 +26,18 @@
     font-size: 14px;
 }
 
-/* ===== TOP SECTION: Watchlist + Leaders ===== */
+/* ===== TOP SECTION: Widgets + Leaders ===== */
 .topSection {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 340px 1fr;
     gap: 24px;
     align-items: start;
 }
 
-.watchlistColumn {
+.widgetsColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     min-width: 0;
     /* Prevent flex/grid overflow */
 }
@@ -226,7 +229,7 @@
         grid-template-columns: 1fr;
     }
 
-    .watchlistColumn {
+    .widgetsColumn {
         order: 2;
     }
 
