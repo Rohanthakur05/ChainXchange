@@ -1,207 +1,34 @@
 .container {
     display: flex;
     flex-direction: column;
-    gap: 32px;
-    max-width: 100%;
-    overflow-x: hidden;
-    /* Prevent horizontal overflow */
-}
-
-.header {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.title {
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0;
-    color: var(--text-primary);
-}
-
-.subtitle {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-}
-
-/* ===== TOP SECTION: Widgets + Leaders ===== */
-.topSection {
-    display: grid;
-    grid-template-columns: 340px 1fr;
     gap: 24px;
-    align-items: start;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
-.widgetsColumn {
+/* ===== LOADING STATE ===== */
+.loadingState {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    min-width: 0;
-    /* Prevent flex/grid overflow */
-}
-
-.leadersColumn {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* ===== CARD GRID (3-column responsive) ===== */
-.cardGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-}
-
-/* ===== COIN CARD ===== */
-.card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    border-color: var(--border-focus, var(--text-muted));
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.cardHeader {
-    display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 16px;
+    padding: 80px 24px;
+    color: var(--text-muted);
 }
 
-.coinIcon {
-    width: 36px;
-    height: 36px;
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-subtle);
+    border-top-color: var(--text-link);
     border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 
-.coinInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.coinSymbol {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--text-primary);
-}
-
-.coinName {
-    font-size: 12px;
-    color: var(--text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px;
-}
-
-.cardBody {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.price {
-    font-size: 16px;
-    font-weight: 700;
-    font-family: var(--font-mono);
-    color: var(--text-primary);
-}
-
-/* ===== SECTIONS (Gainers/Losers) ===== */
-.section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.sectionHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.sectionTitleGroup {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.sectionTitle {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    color: var(--text-primary);
-}
-
-.sectionCount {
-    font-size: 13px;
-    color: var(--text-muted);
-    padding: 2px 8px;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-sm);
-}
-
-.sectionIconGain {
-    color: var(--color-buy);
-}
-
-.sectionIconLoss {
-    color: var(--color-sell);
-}
-
-/* ===== SEE MORE BUTTON ===== */
-.seeMoreBtn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 12px;
-    background: transparent;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    color: var(--text-link);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.seeMoreBtn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--text-link);
-}
-
-/* ===== LOADING SKELETONS ===== */
-.skeletonCard {
-    height: 110px;
-    background: var(--bg-card);
-    border-radius: var(--radius-lg);
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        opacity: 0.6;
-    }
-
-    50% {
-        opacity: 0.3;
-    }
-
-    100% {
-        opacity: 0.6;
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
 }
 
@@ -214,44 +41,136 @@
     border-radius: var(--radius-lg);
 }
 
+/* ===== BOTTOM SECTION: Watchlist + News ===== */
+.bottomSection {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 24px;
+    align-items: start;
+}
+
+/* ===== LEADERS SECTION ===== */
+.leadersSection {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.leadersGrid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+}
+
+.leaderCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.leaderCard:hover {
+    border-color: var(--text-muted);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.leaderIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.leaderInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.leaderSymbol {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.leaderPrice {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+.leaderChange {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.leaderChange.positive {
+    color: var(--color-buy, #00c853);
+    background: rgba(0, 200, 83, 0.1);
+}
+
+.leaderChange.negative {
+    color: var(--color-sell, #ea3943);
+    background: rgba(234, 57, 67, 0.1);
+}
+
 /* ===== RESPONSIVE ===== */
 
-/* Tablet: 2 columns */
+/* Large screens (< 1200px) */
 @media (max-width: 1200px) {
-    .cardGrid {
+    .leadersGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Tablet (< 1024px) */
+@media (max-width: 1024px) {
+    .bottomSection {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 768px) {
+    .container {
+        gap: 16px;
+    }
+
+    .leadersGrid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-/* Mobile: Stack layout */
-@media (max-width: 900px) {
-    .topSection {
-        grid-template-columns: 1fr;
-    }
-
-    .widgetsColumn {
-        order: 2;
-    }
-
-    .leadersColumn {
-        order: 1;
-    }
-}
-
-/* Small screens: Single column cards */
-@media (max-width: 640px) {
-    .cardGrid {
-        grid-template-columns: 1fr;
-    }
-
-    .sectionHeader {
-        flex-direction: column;
-        align-items: flex-start;
+/* Small Mobile (< 480px) */
+@media (max-width: 480px) {
+    .leadersGrid {
+        grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
 
-    .seeMoreBtn {
-        width: 100%;
-        justify-content: center;
+    .leaderCard {
+        padding: 12px;
+    }
+
+    .leaderIcon {
+        width: 32px;
+        height: 32px;
     }
 }

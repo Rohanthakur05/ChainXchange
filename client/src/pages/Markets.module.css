@@ -42,6 +42,95 @@
     border-color: var(--text-secondary);
 }
 
+/* ===== TAB SYSTEM ===== */
+.tabsContainer {
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+}
+
+.tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 2px;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tab:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.tab.activeTab {
+    background: var(--text-link);
+    border-color: var(--text-link);
+    color: white;
+}
+
+.watchlistTab {
+    background: rgba(245, 166, 35, 0.05);
+    border-color: rgba(245, 166, 35, 0.2);
+}
+
+.watchlistTab:hover {
+    background: rgba(245, 166, 35, 0.1);
+    border-color: rgba(245, 166, 35, 0.4);
+}
+
+.watchlistTab.activeTab {
+    background: #f5a623;
+    border-color: #f5a623;
+    color: #000;
+}
+
+.tabLabel {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tabCount {
+    font-size: 11px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.tabDivider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-subtle);
+    margin: 0 8px;
+    flex-shrink: 0;
+}
+
 /* Table */
 .tableContainer {
     background-color: var(--bg-card);
@@ -177,4 +266,33 @@
 .categoryIcon {
     font-size: 14px;
     line-height: 1;
+}
+
+/* ===== EMPTY STATE ===== */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.emptyIcon {
+    color: var(--text-muted);
+    opacity: 0.5;
+    margin-bottom: 8px;
+}
+
+.emptyState p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.emptyHint {
+    font-size: 13px;
+    color: var(--text-muted);
 }

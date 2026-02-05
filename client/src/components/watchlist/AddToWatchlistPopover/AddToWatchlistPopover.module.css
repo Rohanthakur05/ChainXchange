@@ -1,0 +1,229 @@
+.popover {
+    position: fixed;
+    z-index: 1000;
+    min-width: 260px;
+    max-width: 300px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== HEADER ===== */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.headerIcon {
+    color: #f5a623;
+}
+
+/* ===== WATCHLIST LIST ===== */
+.watchlistList {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.watchlistOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-align: left;
+}
+
+.watchlistOption:hover:not(.disabled) {
+    background: var(--bg-secondary);
+}
+
+.watchlistOption.disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.watchlistInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.watchlistName {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.coinCount {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.checkIcon {
+    color: var(--color-buy, #00c853);
+}
+
+.addIcon {
+    color: var(--text-muted);
+}
+
+.spinner {
+    animation: spin 0.8s linear infinite;
+    color: var(--text-link);
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== CREATE NEW BUTTON ===== */
+.createNewBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-link);
+    transition: background 0.15s ease;
+}
+
+.createNewBtn:hover {
+    background: var(--bg-secondary);
+}
+
+/* ===== CREATE FORM ===== */
+.createForm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.input:focus {
+    border-color: var(--text-link);
+}
+
+.input::placeholder {
+    color: var(--text-muted);
+}
+
+.formActions {
+    display: flex;
+    gap: 4px;
+}
+
+.cancelBtn,
+.submitBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.cancelBtn {
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+}
+
+.cancelBtn:hover {
+    background: rgba(234, 57, 67, 0.2);
+    color: var(--color-sell, #ea3943);
+}
+
+.submitBtn {
+    background: var(--text-link);
+    color: white;
+}
+
+.submitBtn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.submitBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===== SUCCESS STATE ===== */
+.successState {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 16px;
+    color: var(--color-buy, #00c853);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.successIcon {
+    color: var(--color-buy, #00c853);
+}
+
+/* ===== ERROR STATE ===== */
+.errorState {
+    padding: 8px 16px;
+    background: rgba(234, 57, 67, 0.1);
+    color: var(--color-sell, #ea3943);
+    font-size: 12px;
+}
+
+/* ===== SCROLLBAR ===== */
+.watchlistList::-webkit-scrollbar {
+    width: 4px;
+}
+
+.watchlistList::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 2px;
+}

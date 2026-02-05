@@ -11,35 +11,35 @@ const FALLBACK_NEWS = [
         title: 'Bitcoin Approaches New Heights as Institutional Interest Grows',
         source: { title: 'CryptoNews' },
         published_at: new Date().toISOString(),
-        url: '#'
+        url: 'https://www.coindesk.com/markets/'
     },
     {
         id: 2,
         title: 'Ethereum 2.0 Staking Rewards See Significant Increase',
         source: { title: 'CoinDesk' },
         published_at: new Date().toISOString(),
-        url: '#'
+        url: 'https://www.coindesk.com/tech/'
     },
     {
         id: 3,
         title: 'Major DeFi Protocol Announces Security Upgrade',
         source: { title: 'The Block' },
         published_at: new Date().toISOString(),
-        url: '#'
+        url: 'https://www.theblock.co/latest'
     },
     {
         id: 4,
         title: 'Central Banks Explore Digital Currency Frameworks',
         source: { title: 'Reuters' },
         published_at: new Date().toISOString(),
-        url: '#'
+        url: 'https://www.reuters.com/technology/cryptocurrency/'
     },
     {
         id: 5,
         title: 'NFT Market Shows Signs of Recovery Amid New Projects',
         source: { title: 'CryptoSlate' },
         published_at: new Date().toISOString(),
-        url: '#'
+        url: 'https://cryptoslate.com/top-news/'
     }
 ];
 

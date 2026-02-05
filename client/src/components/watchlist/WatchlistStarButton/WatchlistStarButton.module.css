@@ -1,0 +1,26 @@
+.starButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.starButton:hover {
+    background: var(--bg-secondary);
+    color: #f5a623;
+}
+
+.starButton.active {
+    color: #f5a623;
+}
+
+.starButton.active:hover {
+    background: rgba(245, 166, 35, 0.1);
+}

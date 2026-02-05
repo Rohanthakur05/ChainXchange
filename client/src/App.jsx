@@ -4,6 +4,7 @@ import api from './utils/api';
 import DashboardLayout from './layouts/DashboardLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { WalletProvider } from './context/WalletContext';
+import { WatchlistProvider } from './context/WatchlistContext';
 
 // Pages
 import Home from './pages/Home';
@@ -157,7 +158,7 @@ function App() {
                       This ensures useWallet() works in Terminal, Dashboard, Markets, etc.
                     */}
                     {isAuthenticated ? (
-                        <Route element={<WalletProvider><AuthenticatedRoutes /></WalletProvider>}>
+                        <Route element={<WalletProvider><WatchlistProvider><AuthenticatedRoutes /></WatchlistProvider></WalletProvider>}>
                             {/* Terminal - Full Screen, No Sidebar */}
                             <Route path="/terminal/:id" element={<Terminal />} />
 

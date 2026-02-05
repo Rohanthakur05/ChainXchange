@@ -1,0 +1,190 @@
+.pulseBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+/* ===== LEFT SECTION ===== */
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+/* Fear & Greed Mini */
+.fearGreedMini {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 24px;
+    border-right: 1px solid var(--border-subtle);
+}
+
+.fearGreedContent {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fearGreedValue {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    line-height: 1;
+}
+
+.fearGreedLabel {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Coin Mini Cards */
+.coinMini {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.coinMini:hover {
+    background: var(--bg-card-hover);
+}
+
+.coinIcon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
+
+.coinData {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.coinSymbol {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.coinPrice {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.coinChange {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.coinChange.positive {
+    color: var(--color-buy, #00c853);
+    background: rgba(0, 200, 83, 0.1);
+}
+
+.coinChange.negative {
+    color: var(--color-sell, #ea3943);
+    background: rgba(234, 57, 67, 0.1);
+}
+
+/* ===== RIGHT SECTION ===== */
+.rightSection {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.statItem {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.statLabel {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.statValue {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.statValue.positive {
+    color: var(--color-buy, #00c853);
+}
+
+.statValue.negative {
+    color: var(--color-sell, #ea3943);
+}
+
+.statPercent {
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+    .pulseBar {
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .leftSection {
+        flex-wrap: wrap;
+    }
+
+    .fearGreedMini {
+        border-right: none;
+        padding-right: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .pulseBar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .leftSection {
+        justify-content: space-between;
+    }
+
+    .rightSection {
+        justify-content: space-between;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    .statItem {
+        align-items: flex-start;
+    }
+}

@@ -1,35 +1,35 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Star, TrendingUp, TrendingDown } from 'lucide-react';
+import { Star, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 import api from '../utils/api';
+import { useWatchlist } from '../context/WatchlistContext';
 import Button from '../components/ui/Button/Button';
 import Badge from '../components/ui/Badge/Badge';
-import { CATEGORIES, filterCoinsByCategory, getCoinCategories } from '../config/categoryData';
+import WatchlistStarButton from '../components/watchlist/WatchlistStarButton/WatchlistStarButton';
+import { CATEGORIES, filterCoinsByCategory } from '../config/categoryData';
 import styles from './Markets.module.css';
 
 const Markets = () => {
     const [coins, setCoins] = useState([]);
-    const [watchlist, setWatchlist] = useState([]); // Array of strings
     const [loading, setLoading] = useState(true);
-    const [togglingCoin, setTogglingCoin] = useState(null); // Track which coin is being toggled
     const [searchParams, setSearchParams] = useSearchParams();
 
+    // Get watchlists from context
+    const { watchlists } = useWatchlist();
+
+    // Active filters from URL
     const activeFilter = searchParams.get('filter') || 'all';
+    const activeWatchlist = searchParams.get('watchlist') || null; // watchlist ID
     const activeCategory = searchParams.get('category') || 'all';
     const searchQuery = searchParams.get('search')?.toLowerCase() || '';
 
+    // Fetch market data
     useEffect(() => {
         const fetchMarkets = async () => {
             try {
-                // Fetch Markets and Profile in parallel
-                const [marketsRes, profileRes] = await Promise.all([
-                    api.get('/crypto'),
-                    api.get('/auth/profile').catch(() => ({ data: { user: { watchlist: [] } } })) // Handle auth error gracefully
-                ]);
-
-                const data = Array.isArray(marketsRes.data) ? marketsRes.data : marketsRes.data.coins || [];
+                const response = await api.get('/crypto');
+                const data = Array.isArray(response.data) ? response.data : response.data.coins || [];
                 setCoins(data);
-                setWatchlist(profileRes.data?.user?.watchlist || []);
             } catch (err) {
                 console.error("Error fetching markets", err);
             } finally {
@@ -39,37 +39,7 @@ const Markets = () => {
         fetchMarkets();
     }, []);
 
-    const toggleWatchlist = async (e, coinId) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Prevent double-clicks
-        if (togglingCoin === coinId) return;
-
-        setTogglingCoin(coinId);
-
-        // Optimistic update
-        const isWatched = watchlist.includes(coinId);
-        const previousWatchlist = [...watchlist];
-        let newWatchlist;
-        if (isWatched) {
-            newWatchlist = watchlist.filter(id => id !== coinId);
-        } else {
-            newWatchlist = [...watchlist, coinId];
-        }
-        setWatchlist(newWatchlist);
-
-        try {
-            await api.post('/auth/watchlist/toggle', { coinId });
-        } catch (err) {
-            console.error('Failed to toggle watchlist', err);
-            // Revert on error
-            setWatchlist(previousWatchlist);
-        } finally {
-            setTogglingCoin(null);
-        }
-    };
-
+    // Filter and sort coins based on active tab
     const filteredAndSortedCoins = useMemo(() => {
         let result = [...coins];
 
@@ -86,20 +56,31 @@ const Markets = () => {
             result = filterCoinsByCategory(result, activeCategory);
         }
 
-        // 3. Apply main filter/sort
-        if (activeFilter === 'watchlist') {
-            result = result.filter(coin => watchlist.includes(coin.id));
-        } else if (activeFilter === 'gainers') {
-            result.sort((a, b) => (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0));
-        } else if (activeFilter === 'losers') {
-            result.sort((a, b) => (a.price_change_percentage_24h || 0) - (b.price_change_percentage_24h || 0));
+        // 3. Apply watchlist filter (if a specific watchlist is selected)
+        if (activeWatchlist) {
+            const selectedWatchlist = watchlists.find(wl => wl._id === activeWatchlist);
+            if (selectedWatchlist) {
+                result = result.filter(coin => selectedWatchlist.coins?.includes(coin.id));
+            } else {
+                // Watchlist was deleted, show empty
+                result = [];
+            }
+        } else {
+            // Apply default filters
+            if (activeFilter === 'gainers') {
+                result.sort((a, b) => (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0));
+            } else if (activeFilter === 'losers') {
+                result.sort((a, b) => (a.price_change_percentage_24h || 0) - (b.price_change_percentage_24h || 0));
+            }
         }
 
         return result;
-    }, [coins, activeFilter, activeCategory, searchQuery, watchlist]);
+    }, [coins, activeFilter, activeWatchlist, activeCategory, searchQuery, watchlists]);
 
+    // Handle default filter change
     const handleFilterChange = (filter) => {
         setSearchParams(prev => {
+            prev.delete('watchlist'); // Clear watchlist when selecting default filter
             if (filter === 'all') {
                 prev.delete('filter');
             } else {
@@ -109,6 +90,16 @@ const Markets = () => {
         }, { replace: true });
     };
 
+    // Handle watchlist tab selection
+    const handleWatchlistSelect = (watchlistId) => {
+        setSearchParams(prev => {
+            prev.delete('filter'); // Clear default filter
+            prev.set('watchlist', watchlistId);
+            return prev;
+        }, { replace: true });
+    };
+
+    // Handle category change
     const handleCategoryChange = (category) => {
         setSearchParams(prev => {
             if (category === 'all') {
@@ -120,6 +111,9 @@ const Markets = () => {
         }, { replace: true });
     };
 
+    // Check if a default filter is active (no watchlist selected)
+    const isDefaultFilter = !activeWatchlist;
+
     if (loading) return <div style={{ padding: '2rem' }}>Loading markets...</div>;
 
     return (
@@ -129,31 +123,48 @@ const Markets = () => {
                 <p className={styles.subtitle}>Real-time prices and market analysis</p>
             </div>
 
-            <div className={styles.filters}>
-                <button
-                    className={`${styles.filterBtn} ${activeFilter === 'all' ? styles.active : ''}`}
-                    onClick={() => handleFilterChange('all')}
-                >
-                    All Assets
-                </button>
-                <button
-                    className={`${styles.filterBtn} ${activeFilter === 'gainers' ? styles.active : ''}`}
-                    onClick={() => handleFilterChange('gainers')}
-                >
-                    <TrendingUp size={14} style={{ marginRight: 6 }} />Top Gainers
-                </button>
-                <button
-                    className={`${styles.filterBtn} ${activeFilter === 'losers' ? styles.active : ''}`}
-                    onClick={() => handleFilterChange('losers')}
-                >
-                    <TrendingDown size={14} style={{ marginRight: 6 }} />Top Losers
-                </button>
-                <button
-                    className={`${styles.filterBtn} ${activeFilter === 'watchlist' ? styles.active : ''}`}
-                    onClick={() => handleFilterChange('watchlist')}
-                >
-                    <Star size={14} style={{ marginRight: 6 }} />Watchlist
-                </button>
+            {/* Main Filter Tabs (Default + Watchlists) */}
+            <div className={styles.tabsContainer}>
+                <div className={styles.tabs}>
+                    {/* Default Tabs */}
+                    <button
+                        className={`${styles.tab} ${isDefaultFilter && activeFilter === 'all' ? styles.activeTab : ''}`}
+                        onClick={() => handleFilterChange('all')}
+                    >
+                        All Assets
+                    </button>
+                    <button
+                        className={`${styles.tab} ${isDefaultFilter && activeFilter === 'gainers' ? styles.activeTab : ''}`}
+                        onClick={() => handleFilterChange('gainers')}
+                    >
+                        <TrendingUp size={14} />
+                        Top Gainers
+                    </button>
+                    <button
+                        className={`${styles.tab} ${isDefaultFilter && activeFilter === 'losers' ? styles.activeTab : ''}`}
+                        onClick={() => handleFilterChange('losers')}
+                    >
+                        <TrendingDown size={14} />
+                        Top Losers
+                    </button>
+
+                    {/* Divider */}
+                    {watchlists.length > 0 && <div className={styles.tabDivider} />}
+
+                    {/* Dynamic Watchlist Tabs */}
+                    {watchlists.map(wl => (
+                        <button
+                            key={wl._id}
+                            className={`${styles.tab} ${styles.watchlistTab} ${activeWatchlist === wl._id ? styles.activeTab : ''}`}
+                            onClick={() => handleWatchlistSelect(wl._id)}
+                            title={`${wl.name} (${wl.coins?.length || 0} coins)`}
+                        >
+                            <Star size={14} fill={activeWatchlist === wl._id ? 'currentColor' : 'none'} />
+                            <span className={styles.tabLabel}>{wl.name}</span>
+                            <span className={styles.tabCount}>{wl.coins?.length || 0}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Category Filters */}
@@ -170,6 +181,7 @@ const Markets = () => {
                 ))}
             </div>
 
+            {/* Markets Table */}
             <div className={styles.tableContainer}>
                 <table className={styles.table}>
                     <thead>
@@ -183,65 +195,57 @@ const Markets = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredAndSortedCoins.length > 0 ? filteredAndSortedCoins.map((coin) => {
-                            const isWatched = watchlist.includes(coin.id);
-                            return (
-                                <tr key={coin.id}>
-                                    <td>
-                                        <div
-                                            onClick={(e) => toggleWatchlist(e, coin.id)}
-                                            style={{
-                                                cursor: togglingCoin === coin.id ? 'wait' : 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                opacity: togglingCoin === coin.id ? 0.5 : 1,
-                                                transition: 'opacity 0.2s'
-                                            }}
-                                            title={isWatched ? "Remove from Watchlist" : "Add to Watchlist"}
-                                        >
-                                            <Star
-                                                size={16}
-                                                fill={isWatched ? "#F0B90B" : "none"}
-                                                color={isWatched ? "#F0B90B" : "var(--text-secondary)"}
-                                                style={togglingCoin === coin.id ? { animation: 'pulse 0.5s infinite' } : {}}
-                                            />
+                        {filteredAndSortedCoins.length > 0 ? filteredAndSortedCoins.map((coin) => (
+                            <tr key={coin.id}>
+                                <td>
+                                    <WatchlistStarButton coin={coin} size={16} />
+                                </td>
+                                <td>
+                                    <div className={styles.assetCell}>
+                                        <img src={coin.image} alt={coin.name} className={styles.assetIcon} />
+                                        <div className={styles.assetInfo}>
+                                            <span className={styles.assetName}>{coin.name}</span>
+                                            <span className={styles.assetSymbol}>{coin.symbol.toUpperCase()}</span>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <div className={styles.assetCell}>
-                                            <img src={coin.image} alt={coin.name} className={styles.assetIcon} />
-                                            <div className={styles.assetInfo}>
-                                                <span className={styles.assetName}>{coin.name}</span>
-                                                <span className={styles.assetSymbol}>{coin.symbol.toUpperCase()}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className={styles.price}>${coin.current_price?.toLocaleString()}</td>
-                                    <td>
-                                        <Badge variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}>
-                                            {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
-                                            {(coin.price_change_percentage_24h || 0).toFixed(2)}%
-                                        </Badge>
-                                    </td>
-                                    <td className={styles.capCell}>${(coin.market_cap || 0).toLocaleString()}</td>
-                                    <td className={styles.actionCell}>
-                                        <Link to={`/markets/${coin.id}`}>
-                                            <Button size="sm" variant="secondary">View</Button>
-                                        </Link>
-                                    </td>
-                                </tr>
-                            );
-                        }) : (
+                                    </div>
+                                </td>
+                                <td className={styles.price}>${coin.current_price?.toLocaleString()}</td>
+                                <td>
+                                    <Badge variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}>
+                                        {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
+                                        {(coin.price_change_percentage_24h || 0).toFixed(2)}%
+                                    </Badge>
+                                </td>
+                                <td className={styles.capCell}>${(coin.market_cap || 0).toLocaleString()}</td>
+                                <td className={styles.actionCell}>
+                                    <Link to={`/markets/${coin.id}`}>
+                                        <Button size="sm" variant="secondary">View</Button>
+                                    </Link>
+                                </td>
+                            </tr>
+                        )) : (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                                    No assets found matching your criteria.
+                                <td colSpan={6}>
+                                    <div className={styles.emptyState}>
+                                        {activeWatchlist ? (
+                                            <>
+                                                <Star size={32} className={styles.emptyIcon} />
+                                                <p>This watchlist is empty</p>
+                                                <span className={styles.emptyHint}>
+                                                    Click the ⭐ on any coin to add it
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <p>No coins found</p>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         )}
                     </tbody>
-                </table >
-            </div >
-        </div >
+                </table>
+            </div>
+        </div>
     );
 };
 
