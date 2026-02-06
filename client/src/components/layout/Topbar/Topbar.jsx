@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, Bell, Wallet, ChevronDown, User, Settings, LogOut, Plus } from 'lucide-react';
 import { useGlobalSearch } from '../../../context/GlobalSearchContext';
 import { useWallet } from '../../../context/WalletContext';
+import HamburgerButton from '../Sidebar/HamburgerButton';
 import AddMoneyModal from '../../wallet/AddMoneyModal';
 import api from '../../../utils/api';
 import styles from './Topbar.module.css';
@@ -100,14 +101,18 @@ const Topbar = () => {
     return (
         <>
             <header className={styles.topbar}>
-                <button
-                    className={styles.searchTrigger}
-                    onClick={openSearch}
-                    type="button"
-                >
-                    <Search size={16} />
-                    <span>Search cryptocurrencies...</span>
-                </button>
+                {/* Left section with hamburger and search */}
+                <div className={styles.leftSection}>
+                    <HamburgerButton />
+                    <button
+                        className={styles.searchTrigger}
+                        onClick={openSearch}
+                        type="button"
+                    >
+                        <Search size={16} />
+                        <span>Search cryptocurrencies...</span>
+                    </button>
+                </div>
 
                 <div className={styles.actions}>
                     {/* Balance Zone */}

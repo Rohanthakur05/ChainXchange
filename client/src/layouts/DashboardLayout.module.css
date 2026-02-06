@@ -3,19 +3,15 @@
     min-height: 100vh;
     background-color: var(--bg-primary);
     overflow-x: hidden;
-    /* Prevent any horizontal overflow at root */
 }
 
 .main {
     flex: 1;
-    margin-left: 240px;
-    /* Sidebar width */
     display: flex;
     flex-direction: column;
-    max-width: calc(100vw - 240px);
-    /* Constrain to available width */
-    overflow-x: hidden;
-    /* Double protection against overflow */
+    width: 100%;
+    /* No margin-left - content takes full width */
+    /* Sidebar overlays content when open */
 }
 
 .content {
@@ -23,13 +19,11 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    /* Content-level protection */
 }
 
-/* Responsive: Hide sidebar margin on mobile */
+/* Responsive adjustments */
 @media (max-width: 768px) {
-    .main {
-        margin-left: 0;
-        max-width: 100vw;
+    .content {
+        padding: 1rem;
     }
 }

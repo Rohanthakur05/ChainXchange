@@ -11,6 +11,13 @@
     z-index: 40;
 }
 
+/* Left section with hamburger and search */
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .searchTrigger {
     display: flex;
     align-items: center;

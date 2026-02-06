@@ -1,0 +1,32 @@
+.hamburgerBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.hamburgerBtn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.hamburgerBtn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-brand);
+}
+
+.hamburgerBtn:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+.hamburgerBtn:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-brand);
+}
