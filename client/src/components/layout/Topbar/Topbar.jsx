@@ -4,6 +4,7 @@ import { Search, Bell, Wallet, ChevronDown, User, Settings, LogOut, Plus } from 
 import { useGlobalSearch } from '../../../context/GlobalSearchContext';
 import { useWallet } from '../../../context/WalletContext';
 import HamburgerButton from '../Sidebar/HamburgerButton';
+import ThemeToggle from '../ThemeToggle/ThemeToggle';
 import AddMoneyModal from '../../wallet/AddMoneyModal';
 import api from '../../../utils/api';
 import styles from './Topbar.module.css';
@@ -136,6 +137,9 @@ const Topbar = () => {
 
                     {/* Controls Zone */}
                     <div className={styles.controls} ref={controlsRef}>
+                        {/* Theme Toggle */}
+                        <ThemeToggle />
+
                         {/* Notification Button */}
                         <div className={styles.dropdownWrapper}>
                             <button

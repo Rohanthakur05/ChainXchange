@@ -1,0 +1,63 @@
+.toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color 0.15s;
+    overflow: hidden;
+}
+
+.toggle:hover {
+    background: var(--bg-secondary);
+}
+
+.toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-brand);
+}
+
+.toggle:focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+.toggle:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-brand);
+}
+
+/* Icon container */
+.icon {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+}
+
+.icon.active {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+/* Hover effect on active icon */
+.toggle:hover .icon.active {
+    color: var(--text-primary);
+}
+
+/* Subtle glow effect for sun icon in light mode */
+[data-theme="light"] .toggle:hover .icon.active {
+    color: #F59E0B;
+}
+
+/* Subtle glow effect for moon icon in dark mode */
+[data-theme="dark"] .toggle:hover .icon.active {
+    color: #818CF8;
+}

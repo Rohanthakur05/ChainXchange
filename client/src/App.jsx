@@ -5,6 +5,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { WalletProvider } from './context/WalletContext';
 import { WatchlistProvider } from './context/WatchlistContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Pages
 import Home from './pages/Home';
@@ -145,51 +146,53 @@ function App() {
     const isAuthenticated = authState === AuthState.AUTHENTICATED;
 
     return (
-        <ErrorBoundary>
-            <Router>
-                <Routes>
-                    {/* Public Routes - No wallet needed */}
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={!isAuthenticated ? <Login onLoginSuccess={checkAuth} /> : <Navigate to="/markets" />} />
-                    <Route path="/signup" element={!isAuthenticated ? <Signup onSignupSuccess={checkAuth} /> : <Navigate to="/markets" />} />
+        <ThemeProvider>
+            <ErrorBoundary>
+                <Router>
+                    <Routes>
+                        {/* Public Routes - No wallet needed */}
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={!isAuthenticated ? <Login onLoginSuccess={checkAuth} /> : <Navigate to="/markets" />} />
+                        <Route path="/signup" element={!isAuthenticated ? <Signup onSignupSuccess={checkAuth} /> : <Navigate to="/markets" />} />
 
-                    {/* 
-                      Authenticated Routes - ALL wrapped in WalletProvider
-                      This ensures useWallet() works in Terminal, Dashboard, Markets, etc.
-                    */}
-                    {isAuthenticated ? (
-                        <Route element={<WalletProvider><WatchlistProvider><AuthenticatedRoutes /></WatchlistProvider></WalletProvider>}>
-                            {/* Terminal - Full Screen, No Sidebar */}
-                            <Route path="/terminal/:id" element={<Terminal />} />
+                        {/* 
+                          Authenticated Routes - ALL wrapped in WalletProvider
+                          This ensures useWallet() works in Terminal, Dashboard, Markets, etc.
+                        */}
+                        {isAuthenticated ? (
+                            <Route element={<WalletProvider><WatchlistProvider><AuthenticatedRoutes /></WatchlistProvider></WalletProvider>}>
+                                {/* Terminal - Full Screen, No Sidebar */}
+                                <Route path="/terminal/:id" element={<Terminal />} />
 
-                            {/* Dashboard Routes - With Sidebar */}
-                            <Route element={<DashboardLayout />}>
-                                <Route path="/dashboard" element={<Dashboard />} />
-                                <Route path="/markets" element={<Markets />} />
-                                <Route path="/markets/:id" element={<CryptoDetail />} />
-                                <Route path="/trade" element={<Trade />} />
-                                <Route path="/portfolio" element={<Portfolio />} />
-                                <Route path="/history" element={<History />} />
-                                <Route path="/profile" element={<Profile />} />
-                                <Route path="*" element={<Navigate to="/markets" replace />} />
+                                {/* Dashboard Routes - With Sidebar */}
+                                <Route element={<DashboardLayout />}>
+                                    <Route path="/dashboard" element={<Dashboard />} />
+                                    <Route path="/markets" element={<Markets />} />
+                                    <Route path="/markets/:id" element={<CryptoDetail />} />
+                                    <Route path="/trade" element={<Trade />} />
+                                    <Route path="/portfolio" element={<Portfolio />} />
+                                    <Route path="/history" element={<History />} />
+                                    <Route path="/profile" element={<Profile />} />
+                                    <Route path="*" element={<Navigate to="/markets" replace />} />
+                                </Route>
                             </Route>
-                        </Route>
-                    ) : (
-                        <>
-                            <Route path="/terminal/:id" element={<Navigate to="/login" />} />
-                            <Route path="/dashboard" element={<Navigate to="/login" />} />
-                            <Route path="/markets" element={<Navigate to="/login" />} />
-                            <Route path="/markets/:id" element={<Navigate to="/login" />} />
-                            <Route path="/trade" element={<Navigate to="/login" />} />
-                            <Route path="/portfolio" element={<Navigate to="/login" />} />
-                            <Route path="/history" element={<Navigate to="/login" />} />
-                            <Route path="/profile" element={<Navigate to="/login" />} />
-                            <Route path="*" element={<Navigate to="/login" />} />
-                        </>
-                    )}
-                </Routes>
-            </Router>
-        </ErrorBoundary>
+                        ) : (
+                            <>
+                                <Route path="/terminal/:id" element={<Navigate to="/login" />} />
+                                <Route path="/dashboard" element={<Navigate to="/login" />} />
+                                <Route path="/markets" element={<Navigate to="/login" />} />
+                                <Route path="/markets/:id" element={<Navigate to="/login" />} />
+                                <Route path="/trade" element={<Navigate to="/login" />} />
+                                <Route path="/portfolio" element={<Navigate to="/login" />} />
+                                <Route path="/history" element={<Navigate to="/login" />} />
+                                <Route path="/profile" element={<Navigate to="/login" />} />
+                                <Route path="*" element={<Navigate to="/login" />} />
+                            </>
+                        )}
+                    </Routes>
+                </Router>
+            </ErrorBoundary>
+        </ThemeProvider>
     );
 }
 

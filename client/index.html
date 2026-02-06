@@ -5,7 +5,21 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>client</title>
+  <title>ChainXchange</title>
+
+  <!-- FOUC Prevention: Apply theme before page renders -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('chainxchange-theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
 </head>
 
 <body>
