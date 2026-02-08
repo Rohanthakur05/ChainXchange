@@ -9,6 +9,7 @@ import Input from '../components/ui/Input/Input';
 import Badge from '../components/ui/Badge/Badge';
 import TradingViewChart from '../components/charts/TradingViewChart';
 import CreateAlertModal from '../components/alerts/CreateAlertModal';
+import ConfirmationModal from '../components/ui/ConfirmationModal';
 import IndicatorsPanel from '../components/charts/IndicatorsPanel';
 import WatchlistManager from '../components/dashboard/WatchlistManager';
 import styles from './CryptoDetail.module.css';
@@ -74,6 +75,7 @@ const CryptoDetail = () => {
 
     const [loading, setLoading] = useState(true);
     const [orderPreview, setOrderPreview] = useState(null);
+    const [confirmModalError, setConfirmModalError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [timeframe, setTimeframe] = useState('24h');
     const [chartLoading, setChartLoading] = useState(false);
@@ -223,6 +225,7 @@ const CryptoDetail = () => {
 
     const confirmOrder = async () => {
         setSubmitting(true);
+        setConfirmModalError('');
         const totalCostValue = orderPreview.quantity * orderPreview.price;
 
         try {
@@ -248,18 +251,16 @@ const CryptoDetail = () => {
                 text: `Successfully ${tradeType === 'buy' ? 'bought' : 'sold'} ${orderPreview.quantity} ${coin.symbol.toUpperCase()} at $${coin.current_price.toLocaleString()}`
             });
 
+            // Close modal on success
             setOrderPreview(null);
             setQuantity('');
 
             // Sync with server to ensure consistency
             syncWallet();
         } catch (err) {
-            // Handle error - backend uses 'error' field, fallback to 'message'
+            // Handle error - show in modal
             const errorMsg = err.response?.data?.error || err.response?.data?.message || err.userMessage;
-            setMessage({
-                type: 'error',
-                text: errorMsg || `${tradeType} order failed. Please try again.`
-            });
+            setConfirmModalError(errorMsg || `${tradeType} order failed. Please try again.`);
         } finally {
             setSubmitting(false);
         }
@@ -487,118 +488,61 @@ const CryptoDetail = () => {
                     </div>
                 </div>
 
-                {!orderPreview ? (
-                    <form className={styles.tradeForm} onSubmit={handlePrepareOrder}>
-                        <div className={styles.balanceDisplay}>
-                            <span>Available Balance</span>
-                            <span className={styles.balanceValue}>
-                                {walletLoading ? 'Loading...' :
-                                    tradeType === 'buy'
-                                        ? `$${wallet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                        : `${holdings?.quantity?.toFixed(8) || '0'} ${coin.symbol.toUpperCase()}`
-                                }
-                            </span>
-                        </div>
-
-                        <Input label="Price (USD)" value={coin.current_price.toLocaleString()} disabled />
-                        <Input
-                            label={`Amount (${coin.symbol.toUpperCase()})`}
-                            type="number"
-                            step="any"
-                            min="0"
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            placeholder="0.00"
-                        />
-
-                        <div style={{ gridColumn: '1 / -1' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Total Estimate:</span>
-                                <span style={{ fontWeight: 600 }}>${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                            <Button
-                                type="submit"
-                                block
-                                size="lg"
-                                variant={tradeType === 'buy' ? 'primary' : 'danger'}
-                                disabled={!quantity || parseFloat(quantity) <= 0 || submitting || walletLoading || loading || (tradeType === 'buy' && totalCost > wallet)}
-                            >
-                                {walletLoading || loading ? 'Loading...' :
-                                    submitting ? 'Processing...' :
-                                        tradeType === 'buy' && totalCost > wallet ? 'Insufficient Funds' :
-                                            `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${coin.symbol.toUpperCase()}`}
-                            </Button>
-                            {message && (
-                                <div style={{
-                                    marginTop: '1rem',
-                                    padding: '0.75rem',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: message.type === 'error' ? 'rgba(255, 61, 0, 0.1)' : 'rgba(0, 200, 83, 0.1)',
-                                    color: message.type === 'error' ? 'var(--color-sell)' : 'var(--color-buy)',
-                                    fontSize: '0.9rem'
-                                }}>
-                                    {message.text}
-                                </div>
-                            )}
-                        </div>
-                    </form>
-                ) : (
-                    <div className={styles.orderConfirmation}>
-                        <h3 className={styles.confirmTitle}>Confirm Order</h3>
-                        <div className={styles.orderSummary}>
-                            <div className={styles.summaryRow}>
-                                <span>Type:</span>
-                                <strong className={orderPreview.type === 'buy' ? styles.buyText : styles.sellText}>
-                                    {orderPreview.type.toUpperCase()}
-                                </strong>
-                            </div>
-                            <div className={styles.summaryRow}>
-                                <span>Asset:</span>
-                                <strong>{orderPreview.coinName}</strong>
-                            </div>
-                            <div className={styles.summaryRow}>
-                                <span>Amount:</span>
-                                <strong>{orderPreview.quantity} {orderPreview.coin}</strong>
-                            </div>
-                            <div className={styles.summaryRow}>
-                                <span>Price:</span>
-                                <strong>${orderPreview.price.toLocaleString()}</strong>
-                            </div>
-                            <div className={styles.summaryRow}>
-                                <span>Fee (0.1%):</span>
-                                <strong>${orderPreview.fee.toFixed(2)}</strong>
-                            </div>
-                            <div className={styles.summaryRow} style={{
-                                borderTop: '1px solid var(--border-subtle)',
-                                paddingTop: '0.75rem',
-                                marginTop: '0.75rem'
-                            }}>
-                                <span>Total:</span>
-                                <strong style={{ fontSize: '1.1rem' }}>
-                                    ${(orderPreview.total + orderPreview.fee).toLocaleString()}
-                                </strong>
-                            </div>
-                        </div>
-                        <div className={styles.confirmActions}>
-                            <Button
-                                onClick={confirmOrder}
-                                variant={orderPreview.type === 'buy' ? 'primary' : 'danger'}
-                                disabled={submitting}
-                                block
-                            >
-                                {submitting ? 'Processing...' : 'Confirm Order'}
-                            </Button>
-                            <Button
-                                onClick={() => setOrderPreview(null)}
-                                variant="secondary"
-                                disabled={submitting}
-                                block
-                            >
-                                Cancel
-                            </Button>
-                        </div>
+                {/* Trade Form - always visible */}
+                <form className={styles.tradeForm} onSubmit={handlePrepareOrder}>
+                    <div className={styles.balanceDisplay}>
+                        <span>Available Balance</span>
+                        <span className={styles.balanceValue}>
+                            {walletLoading ? 'Loading...' :
+                                tradeType === 'buy'
+                                    ? `$${wallet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : `${holdings?.quantity?.toFixed(8) || '0'} ${coin.symbol.toUpperCase()}`
+                            }
+                        </span>
                     </div>
-                )}
+
+                    <Input label="Price (USD)" value={coin.current_price.toLocaleString()} disabled />
+                    <Input
+                        label={`Amount (${coin.symbol.toUpperCase()})`}
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        placeholder="0.00"
+                    />
+
+                    <div style={{ gridColumn: '1 / -1' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Total Estimate:</span>
+                            <span style={{ fontWeight: 600 }}>${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <Button
+                            type="submit"
+                            block
+                            size="lg"
+                            variant={tradeType === 'buy' ? 'primary' : 'danger'}
+                            disabled={!quantity || parseFloat(quantity) <= 0 || submitting || walletLoading || loading || (tradeType === 'buy' && totalCost > wallet)}
+                        >
+                            {walletLoading || loading ? 'Loading...' :
+                                submitting ? 'Processing...' :
+                                    tradeType === 'buy' && totalCost > wallet ? 'Insufficient Funds' :
+                                        `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${coin.symbol.toUpperCase()}`}
+                        </Button>
+                        {message && (
+                            <div style={{
+                                marginTop: '1rem',
+                                padding: '0.75rem',
+                                borderRadius: 'var(--radius-md)',
+                                background: message.type === 'error' ? 'rgba(255, 61, 0, 0.1)' : 'rgba(0, 200, 83, 0.1)',
+                                color: message.type === 'error' ? 'var(--color-sell)' : 'var(--color-buy)',
+                                fontSize: '0.9rem'
+                            }}>
+                                {message.text}
+                            </div>
+                        )}
+                    </div>
+                </form>
             </div>
 
             {/* Recent Trades (Mock) */}
@@ -654,6 +598,29 @@ const CryptoDetail = () => {
                         />
                     </div>
                 </div>
+            )}
+
+            {/* Buy/Sell Confirmation Modal */}
+            {orderPreview && (
+                <ConfirmationModal
+                    isOpen={!!orderPreview}
+                    onClose={() => {
+                        setOrderPreview(null);
+                        setConfirmModalError('');
+                    }}
+                    onConfirm={confirmOrder}
+                    type={orderPreview.type}
+                    coin={{
+                        name: coin.name,
+                        symbol: coin.symbol,
+                        image: coin.image
+                    }}
+                    quantity={orderPreview.quantity}
+                    price={orderPreview.price}
+                    fee={orderPreview.fee}
+                    loading={submitting}
+                    error={confirmModalError}
+                />
             )}
         </div>
     );
