@@ -9,6 +9,7 @@ import { ToastProvider } from '../components/ui/Toast';
 import { KeyboardShortcutProvider, useKeyboardShortcuts } from '../context/KeyboardShortcutContext';
 import GlobalSearchModal from '../components/layout/GlobalSearch/GlobalSearchModal';
 import ShortcutHintModal from '../components/ui/ShortcutHintModal';
+import OfflineBanner from '../components/ui/OfflineBanner';
 import styles from './DashboardLayout.module.css';
 
 // Inner component to access keyboard shortcut context
@@ -17,6 +18,9 @@ const DashboardLayoutInner = () => {
 
     return (
         <SidebarProvider>
+            {/* Offline status banner */}
+            <OfflineBanner />
+
             <div className={styles.layout}>
                 {/* Sidebar (hidden by default, slides in) */}
                 <Sidebar />
@@ -57,4 +61,5 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
+
 

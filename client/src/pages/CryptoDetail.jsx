@@ -12,6 +12,7 @@ import Badge from '../components/ui/Badge/Badge';
 import TradingViewChart from '../components/charts/TradingViewChart';
 import CreateAlertModal from '../components/alerts/CreateAlertModal';
 import ConfirmationModal from '../components/ui/ConfirmationModal';
+import SuccessAnimation from '../components/ui/SuccessAnimation';
 import IndicatorsPanel from '../components/charts/IndicatorsPanel';
 import WatchlistManager from '../components/dashboard/WatchlistManager';
 import styles from './CryptoDetail.module.css';
@@ -88,6 +89,8 @@ const CryptoDetail = () => {
     const [chartMode, setChartMode] = useState('graph'); // 'graph' | 'tradingview'
     const [alertModalOpen, setAlertModalOpen] = useState(false);
     const [indicatorsPanelOpen, setIndicatorsPanelOpen] = useState(false);
+    const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+    const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
     const [watchlistModalOpen, setWatchlistModalOpen] = useState(false);
 
     // Load indicators from localStorage (user's explicit choices)
@@ -291,10 +294,12 @@ const CryptoDetail = () => {
                 executeSell(coin.id, orderPreview.quantity, totalCostValue);
             }
 
-            setMessage({
-                type: 'success',
-                text: `Successfully ${tradeType === 'buy' ? 'bought' : 'sold'} ${orderPreview.quantity} ${coin.symbol.toUpperCase()} at $${coin.current_price.toLocaleString()}`
+            // Show success animation
+            setSuccessMessage({
+                title: tradeType === 'buy' ? 'Purchase Complete!' : 'Sale Complete!',
+                message: `${orderPreview.quantity} ${coin.symbol.toUpperCase()} at $${coin.current_price.toLocaleString()}`
             });
+            setShowSuccessAnimation(true);
 
             // Close modal on success
             setOrderPreview(null);
@@ -667,6 +672,16 @@ const CryptoDetail = () => {
                     error={confirmModalError}
                 />
             )}
+
+            {/* Success Animation after trade */}
+            <SuccessAnimation
+                isVisible={showSuccessAnimation}
+                onComplete={() => setShowSuccessAnimation(false)}
+                title={successMessage.title}
+                message={successMessage.message}
+                showConfetti={true}
+                duration={2500}
+            />
         </div>
     );
 };

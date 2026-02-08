@@ -1,0 +1,104 @@
+.banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    padding: 0.625rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    animation: slideDown 300ms ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+.exiting {
+    animation: slideUp 300ms ease-in forwards;
+}
+
+/* Offline state */
+.offline {
+    background: linear-gradient(90deg, #FF5252 0%, #FF1744 100%);
+    color: white;
+}
+
+/* Back online state */
+.online {
+    background: linear-gradient(90deg, #00C853 0%, #00E676 100%);
+    color: white;
+}
+
+.icon {
+    flex-shrink: 0;
+}
+
+.text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .banner {
+        animation: none;
+    }
+
+    .exiting {
+        animation: none;
+        opacity: 0;
+    }
+
+    .pulse {
+        animation: none;
+    }
+}

@@ -1,0 +1,178 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    animation: fadeIn 200ms ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2.5rem;
+    background: var(--bg-card, #161B22);
+    border-radius: var(--radius-xl, 16px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: scaleIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   CHECKMARK ANIMATION
+   ============================================ */
+
+.checkmarkCircle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: circleIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes circleIn {
+    from {
+        transform: scale(0);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}
+
+.checkmark {
+    width: 40px;
+    height: 40px;
+    stroke: white;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.checkmarkPath {
+    stroke-dasharray: 50;
+    stroke-dashoffset: 50;
+    animation: drawCheck 400ms ease-out 200ms forwards;
+}
+
+@keyframes drawCheck {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* ============================================
+   TEXT
+   ============================================ */
+
+.text {
+    text-align: center;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+    margin: 0 0 0.5rem;
+}
+
+.message {
+    font-size: 0.95rem;
+    color: var(--text-secondary, #8B949E);
+    margin: 0;
+}
+
+/* ============================================
+   CONFETTI
+   ============================================ */
+
+.confettiContainer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 10001;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    opacity: 0;
+    animation: confettiFall 3s ease-in-out forwards;
+}
+
+@keyframes confettiFall {
+    0% {
+        opacity: 1;
+        transform: translateY(-100px) rotate(0deg);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(100vh) rotate(720deg);
+    }
+}
+
+/* Confetti shapes */
+.confetti:nth-child(odd) {
+    border-radius: 50%;
+}
+
+.confetti:nth-child(even) {
+    border-radius: 2px;
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .overlay,
+    .container,
+    .checkmarkCircle {
+        animation: none;
+    }
+
+    .checkmarkPath {
+        stroke-dashoffset: 0;
+        animation: none;
+    }
+
+    .confetti {
+        animation: none;
+        display: none;
+    }
+}
