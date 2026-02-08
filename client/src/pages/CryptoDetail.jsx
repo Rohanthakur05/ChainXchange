@@ -4,6 +4,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { LineChart, CandlestickChart, Bell, SlidersHorizontal, Maximize2, Star } from 'lucide-react';
 import api from '../utils/api';
 import { useWallet } from '../context/WalletContext';
+import { useKeyboardShortcuts } from '../context/KeyboardShortcutContext';
+import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button/Button';
 import Input from '../components/ui/Input/Input';
 import Badge from '../components/ui/Badge/Badge';
@@ -69,6 +71,10 @@ const CryptoDetail = () => {
     // Use global wallet context for single source of truth
     const { wallet, getCoinHoldings, executeBuy, executeSell, syncWallet, loading: walletLoading } = useWallet();
     const holdings = getCoinHoldings(id);
+
+    // Keyboard shortcuts integration
+    const { setCurrentCoin, registerTradeHandlers, unregisterTradeHandlers } = useKeyboardShortcuts();
+    const toast = useToast();
 
     // Debug: Log wallet values from context
     console.log('[CryptoDetail] Wallet from context:', wallet, 'Loading:', walletLoading);
@@ -155,6 +161,45 @@ const CryptoDetail = () => {
             loadChartData(timeframe);
         }
     }, [timeframe, id]);
+
+    // Register keyboard shortcut handlers (B/S/W keys)
+    useEffect(() => {
+        if (!coin) return;
+
+        // Set current coin context for keyboard shortcuts
+        setCurrentCoin({ id: coin.id, name: coin.name, symbol: coin.symbol });
+
+        // Register trade action handlers
+        registerTradeHandlers({
+            openBuyModal: () => {
+                setTradeType('buy');
+                // Focus on quantity input or open trade panel
+                const quantityInput = document.querySelector('input[type="number"]');
+                if (quantityInput) {
+                    quantityInput.focus();
+                    toast.info('Buy mode active', `Enter amount to buy ${coin.symbol.toUpperCase()}`);
+                }
+            },
+            openSellModal: () => {
+                setTradeType('sell');
+                const quantityInput = document.querySelector('input[type="number"]');
+                if (quantityInput) {
+                    quantityInput.focus();
+                    toast.info('Sell mode active', `Enter amount to sell ${coin.symbol.toUpperCase()}`);
+                }
+            },
+            toggleWatchlist: () => {
+                setWatchlistModalOpen(true);
+                toast.info('Watchlist', `Manage ${coin.name} in watchlists`);
+            }
+        });
+
+        // Cleanup on unmount
+        return () => {
+            setCurrentCoin(null);
+            unregisterTradeHandlers();
+        };
+    }, [coin, setCurrentCoin, registerTradeHandlers, unregisterTradeHandlers, toast]);
 
     // Real-time price updates (every 15 seconds)
     useEffect(() => {
