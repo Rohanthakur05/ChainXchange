@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { classifyError, parseError, logError } from './errors';
 
 const api = axios.create({
     baseURL: '/', // Proxy handles the rest
@@ -12,33 +13,24 @@ const api = axios.create({
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Network error (ECONNREFUSED, timeout, DNS failure, etc.)
-        if (!error.response) {
-            console.error('Network Error:', error.message);
-            error.isNetworkError = true;
-            error.userMessage = 'Cannot reach server. Please check if the backend is running.';
-            return Promise.reject(error);
-        }
+        // Classify and parse the error using centralized system
+        const errorCode = classifyError(error);
+        const parsed = parseError(error);
 
-        // Handle specific HTTP status codes
-        switch (error.response.status) {
-            case 401:
-                console.log('Unauthorized - session may have expired');
-                error.userMessage = 'Please log in to continue.';
-                break;
-            case 500:
-                error.userMessage = 'Server error. Please try again later.';
-                break;
-            case 503:
-                error.userMessage = 'Service temporarily unavailable.';
-                break;
-            default:
-                // Backend returns 'error' field, some may use 'message'
-                error.userMessage = error.response.data?.error || error.response.data?.message || 'An error occurred.';
-        }
+        // Attach structured error info for easy consumption
+        error.errorCode = errorCode;
+        error.parsed = parsed;
+        error.userMessage = parsed.message;
+        error.userTitle = parsed.title;
+        error.suggestion = parsed.suggestion;
+        error.severity = parsed.severity;
+
+        // Log for debugging (silent)
+        logError(error);
 
         return Promise.reject(error);
     }
 );
 
 export default api;
+

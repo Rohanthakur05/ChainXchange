@@ -1,0 +1,81 @@
+.inlineError {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    animation: slideDown 200ms ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Severity variants */
+.error {
+    background: rgba(255, 61, 0, 0.1);
+    border: 1px solid rgba(255, 61, 0, 0.2);
+    color: var(--color-sell, #FF3D00);
+}
+
+.warning {
+    background: rgba(255, 179, 0, 0.1);
+    border: 1px solid rgba(255, 179, 0, 0.2);
+    color: #FFB300;
+}
+
+.info {
+    background: rgba(41, 98, 255, 0.1);
+    border: 1px solid rgba(41, 98, 255, 0.2);
+    color: var(--color-brand, #2962FF);
+}
+
+/* Icon */
+.icon {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+/* Content */
+.content {
+    flex: 1;
+    min-width: 0;
+}
+
+.title {
+    font-weight: 600;
+    margin-bottom: 0.125rem;
+}
+
+.message {
+    opacity: 0.9;
+}
+
+.suggestion {
+    margin-top: 0.375rem;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+/* Compact variant (for tight spaces) */
+.compact {
+    padding: 0.5rem 0.75rem;
+}
+
+.compact .title {
+    display: none;
+}
+
+.compact .suggestion {
+    display: none;
+}
