@@ -160,3 +160,32 @@
 .deleteBtn:hover {
     color: var(--color-sell);
 }
+
+/* Mode badge (once/recurring) */
+.modeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.375rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-right: 0.5rem;
+}
+
+.modeBadge.recurring {
+    background: rgba(41, 98, 255, 0.15);
+    color: var(--color-brand);
+}
+
+.triggerCount {
+    color: var(--text-secondary);
+}
+
+.dateLabel {
+    color: var(--text-muted);
+}

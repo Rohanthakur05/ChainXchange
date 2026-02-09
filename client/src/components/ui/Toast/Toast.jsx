@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { X, Info, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react';
+import { X, Info, CheckCircle, AlertTriangle, AlertCircle, Bell } from 'lucide-react';
 import styles from './Toast.module.css';
 
 // Toast Context
@@ -22,17 +22,19 @@ const ToastItem = ({ id, type = 'info', message, description, onClose }) => {
         setTimeout(() => onClose(id), 150);
     }, [id, onClose]);
 
-    // Auto-dismiss after 3 seconds
+    // Auto-dismiss (longer for alerts)
     React.useEffect(() => {
-        const timer = setTimeout(handleClose, 3000);
+        const duration = type === 'alert' ? 5000 : 3000;
+        const timer = setTimeout(handleClose, duration);
         return () => clearTimeout(timer);
-    }, [handleClose]);
+    }, [handleClose, type]);
 
     const getIcon = () => {
         switch (type) {
             case 'success': return <CheckCircle size={20} />;
             case 'warning': return <AlertTriangle size={20} />;
             case 'error': return <AlertCircle size={20} />;
+            case 'alert': return <Bell size={20} />;
             default: return <Info size={20} />;
         }
     };
@@ -71,6 +73,7 @@ export const ToastProvider = ({ children }) => {
         success: (message, description) => addToast({ type: 'success', message, description }),
         warning: (message, description) => addToast({ type: 'warning', message, description }),
         error: (message, description) => addToast({ type: 'error', message, description }),
+        alert: (message, description) => addToast({ type: 'alert', message, description }),
     };
 
     return (

@@ -7,6 +7,7 @@ import { WalletProvider } from './context/WalletContext';
 import { WatchlistProvider } from './context/WatchlistContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { OnboardingProvider } from './context/OnboardingContext';
+import { AlertProvider } from './context/AlertContext';
 import OnboardingTour from './components/onboarding/OnboardingTour';
 
 // Pages
@@ -162,7 +163,7 @@ function App() {
                           This ensures useWallet() works in Terminal, Dashboard, Markets, etc.
                         */}
                         {isAuthenticated ? (
-                            <Route element={<WalletProvider><WatchlistProvider><OnboardingProvider><AuthenticatedRoutes /><OnboardingTour /></OnboardingProvider></WatchlistProvider></WalletProvider>}>
+                            <Route element={<WalletProvider><WatchlistProvider><AlertProvider><OnboardingProvider><AuthenticatedRoutes /><OnboardingTour /></OnboardingProvider></AlertProvider></WatchlistProvider></WalletProvider>}>
                                 {/* Terminal - Full Screen, No Sidebar */}
                                 <Route path="/terminal/:id" element={<Terminal />} />
 

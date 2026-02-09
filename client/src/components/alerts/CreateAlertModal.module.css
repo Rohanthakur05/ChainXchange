@@ -166,3 +166,69 @@ form {
     color: var(--color-sell);
     font-size: 0.875rem;
 }
+
+/* Section styling */
+.section {
+    margin-bottom: 1.25rem;
+}
+
+.sectionLabel {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Mode selector (one-time vs recurring) */
+.modeSelector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.modeBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.modeBtn:hover {
+    border-color: var(--border-default);
+}
+
+.modeBtn.active {
+    border-color: var(--color-brand);
+    background: rgba(41, 98, 255, 0.08);
+}
+
+.modeBtn.active svg {
+    color: var(--color-brand);
+}
+
+.modeBtnText {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.modeBtnLabel {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.modeBtnDesc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
