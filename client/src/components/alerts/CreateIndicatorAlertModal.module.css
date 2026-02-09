@@ -1,0 +1,341 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideIn 200ms ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.headerTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.closeBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.closeBtn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Coin info */
+.coinInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.coinImage {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.coinName {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.coinSymbol {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Form */
+.form {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Indicator tabs */
+.indicatorTabs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.indicatorTab {
+    flex: 1;
+    padding: 0.625rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.indicatorTab:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.indicatorTab.active {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: white;
+}
+
+.indicatorDescription {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.indicatorDescription svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* RSI config */
+.rsiConfig {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.select {
+    flex: 1;
+    padding: 0.625rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.numberInput {
+    width: 80px;
+    padding: 0.625rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.numberInput:focus,
+.select:focus {
+    outline: none;
+    border-color: var(--color-brand);
+}
+
+.presets {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.presets button {
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.presets button:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+}
+
+/* Signal buttons */
+.signalButtons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.signalBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.signalBtn:hover {
+    background: var(--bg-tertiary);
+}
+
+.signalBtn.bullish {
+    background: rgba(0, 200, 83, 0.15);
+    border-color: var(--color-buy);
+    color: var(--color-buy);
+}
+
+.signalBtn.bearish {
+    background: rgba(234, 57, 67, 0.15);
+    border-color: var(--color-sell);
+    color: var(--color-sell);
+}
+
+/* MA periods */
+.maPeriods {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.periodInput {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.periodInput label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.periodInput input {
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* Mode buttons */
+.modeButtons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.modeBtn {
+    flex: 1;
+    padding: 0.625rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.modeBtn:hover {
+    background: var(--bg-tertiary);
+}
+
+.modeBtn.active {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: white;
+}
+
+/* Submit */
+.submitBtn {
+    padding: 0.875rem;
+    background: var(--color-brand);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.submitBtn:hover {
+    filter: brightness(1.1);
+}
+
+.submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

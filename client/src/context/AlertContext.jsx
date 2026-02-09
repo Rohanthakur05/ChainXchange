@@ -84,16 +84,14 @@ export const AlertProvider = ({ children }) => {
     }, [alerts, dailyTriggerCount, isLoading]);
 
     /**
-     * Create a new alert
+     * Create a new alert (price or indicator)
      */
     const createAlert = useCallback((alertData) => {
-        const newAlert = {
+        const baseAlert = {
             id: generateId(),
             coinId: alertData.coinId,
             coinName: alertData.coinName,
             coinSymbol: alertData.coinSymbol,
-            condition: alertData.condition, // 'above' | 'below'
-            targetPrice: alertData.targetPrice,
             alertMode: alertData.alertMode || 'once', // 'once' | 'recurring'
             isEnabled: true,
             createdAt: Date.now(),
@@ -101,6 +99,26 @@ export const AlertProvider = ({ children }) => {
             triggerCount: 0,
             status: 'active',
         };
+
+        let newAlert;
+
+        if (alertData.type === 'indicator') {
+            // Indicator-based alert
+            newAlert = {
+                ...baseAlert,
+                type: 'indicator',
+                indicatorType: alertData.indicatorType, // 'rsi' | 'macd' | 'ma_crossover'
+                config: alertData.config, // Indicator-specific config
+            };
+        } else {
+            // Price-based alert (default)
+            newAlert = {
+                ...baseAlert,
+                type: 'price',
+                condition: alertData.condition, // 'above' | 'below'
+                targetPrice: alertData.targetPrice,
+            };
+        }
 
         setAlerts(prev => [...prev, newAlert]);
         return newAlert;
@@ -173,6 +191,20 @@ export const AlertProvider = ({ children }) => {
     }, [alerts]);
 
     /**
+     * Get active price alerts
+     */
+    const getActivePriceAlerts = useCallback(() => {
+        return alerts.filter(alert => alert.isEnabled && alert.status === 'active' && alert.type !== 'indicator');
+    }, [alerts]);
+
+    /**
+     * Get active indicator alerts
+     */
+    const getActiveIndicatorAlerts = useCallback(() => {
+        return alerts.filter(alert => alert.isEnabled && alert.status === 'active' && alert.type === 'indicator');
+    }, [alerts]);
+
+    /**
      * Check if within daily notification limit
      */
     const canTriggerNotification = useCallback(() => {
@@ -210,6 +242,8 @@ export const AlertProvider = ({ children }) => {
         // Queries
         getAlertsForCoin,
         getActiveAlerts,
+        getActivePriceAlerts,
+        getActiveIndicatorAlerts,
         canTriggerNotification,
     };
 
