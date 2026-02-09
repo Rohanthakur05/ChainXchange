@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Star, TrendingUp, TrendingDown, Plus } from 'lucide-react';
+import { Star, TrendingUp, TrendingDown, Plus, GitCompare } from 'lucide-react';
 import api from '../utils/api';
 import { useWatchlist } from '../context/WatchlistContext';
+import { useCompare } from '../context/CompareContext';
 import Button from '../components/ui/Button/Button';
 import Badge from '../components/ui/Badge/Badge';
 import WatchlistStarButton from '../components/watchlist/WatchlistStarButton/WatchlistStarButton';
@@ -17,6 +18,9 @@ const Markets = () => {
 
     // Get watchlists from context
     const { watchlists } = useWatchlist();
+
+    // Get compare context
+    const { openCompare, selectedCoinIds, toggleCoin } = useCompare();
 
     // Active filters from URL
     const activeFilter = searchParams.get('filter') || 'all';
@@ -120,8 +124,21 @@ const Markets = () => {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1 className={styles.title}>Markets</h1>
-                <p className={styles.subtitle}>Real-time prices and market analysis</p>
+                <div className={styles.headerText}>
+                    <h1 className={styles.title}>Markets</h1>
+                    <p className={styles.subtitle}>Real-time prices and market analysis</p>
+                </div>
+                <button
+                    className={styles.compareBtn}
+                    onClick={openCompare}
+                    title="Compare coins"
+                >
+                    <GitCompare size={16} />
+                    Compare
+                    {selectedCoinIds.length > 0 && (
+                        <span className={styles.compareBadge}>{selectedCoinIds.length}</span>
+                    )}
+                </button>
             </div>
 
             {/* Main Filter Tabs (Default + Watchlists) */}

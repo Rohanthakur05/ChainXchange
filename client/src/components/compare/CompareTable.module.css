@@ -1,0 +1,207 @@
+.container {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+}
+
+.header {
+    display: grid;
+    grid-template-columns: 120px repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.coinHeader {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.25rem 1rem;
+    background: var(--bg-card);
+    text-align: center;
+}
+
+.removeBtn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--bg-secondary);
+    border: none;
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.removeBtn:hover {
+    background: var(--color-sell);
+    color: white;
+}
+
+.coinImage {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.coinName {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.coinSymbol {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.viewBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.viewBtn:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+}
+
+/* Metrics grid */
+.metricsGrid {
+    display: flex;
+    flex-direction: column;
+}
+
+.metricRow {
+    display: grid;
+    grid-template-columns: 120px repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--border-subtle);
+}
+
+.metricRow:nth-child(odd) {
+    background: var(--bg-secondary);
+}
+
+.metricLabel {
+    padding: 0.875rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+}
+
+.metricValue {
+    padding: 0.875rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Highlighting */
+.best {
+    background: rgba(22, 199, 132, 0.1);
+    color: var(--color-buy);
+    font-weight: 600;
+}
+
+.worst {
+    background: rgba(234, 57, 67, 0.08);
+    color: var(--color-sell);
+}
+
+/* Percent values */
+.percentValue {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.positive {
+    color: var(--color-buy);
+}
+
+.negative {
+    color: var(--color-sell);
+}
+
+/* Empty and loading states */
+.empty,
+.loading {
+    padding: 3rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.empty p {
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.empty span {
+    font-size: 0.85rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .header {
+        grid-template-columns: 1fr;
+    }
+
+    .metricRow {
+        grid-template-columns: 1fr;
+    }
+
+    .metricLabel {
+        background: var(--bg-secondary);
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+    }
+
+    .coinHeader {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    .coinImage {
+        width: 32px;
+        height: 32px;
+    }
+
+    .removeBtn {
+        position: static;
+        order: 3;
+        margin-left: auto;
+    }
+
+    .viewBtn {
+        display: none;
+    }
+}
