@@ -1,0 +1,183 @@
+.filterBar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filterIcon {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Date Input */
+.dateInput {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    min-width: 140px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+}
+
+.dateInput:hover,
+.dateInput:focus {
+    border-color: var(--color-brand);
+    outline: none;
+}
+
+/* For webkit browsers (Chrome, Safari) */
+.dateInput::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+}
+
+/* Select Dropdown */
+.select {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    min-width: 130px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+}
+
+.select:hover,
+.select:focus {
+    border-color: var(--color-brand);
+    outline: none;
+}
+
+.select option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+/* Type Buttons */
+.typeButtons {
+    display: flex;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.typeBtn {
+    padding: 0.5rem 0.85rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.typeBtn:not(:last-child) {
+    border-right: 1px solid var(--border-subtle);
+}
+
+.typeBtn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.typeBtn.active {
+    background: var(--color-brand);
+    color: white;
+}
+
+.typeBtn.buyBtn.active {
+    background: var(--color-buy);
+}
+
+.typeBtn.sellBtn.active {
+    background: var(--color-sell);
+}
+
+/* Clear Button */
+.clearBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-left: auto;
+}
+
+.clearBtn:hover {
+    background: rgba(255, 61, 0, 0.1);
+    border-color: var(--color-sell);
+    color: var(--color-sell);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filterBar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .filterGroup {
+        width: 100%;
+    }
+
+    .dateInput,
+    .select {
+        width: 100%;
+    }
+
+    .typeButtons {
+        width: 100%;
+    }
+
+    .typeBtn {
+        flex: 1;
+    }
+
+    .clearBtn {
+        width: 100%;
+        margin-left: 0;
+        justify-content: center;
+    }
+}

@@ -1,5 +1,21 @@
 .historyContainer {
-    padding: 1rem;
+    padding: 2rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.resultsCount {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
 }
 
 .tableWrapper {

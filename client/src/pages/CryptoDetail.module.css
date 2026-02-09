@@ -319,6 +319,9 @@
 }
 
 .tradeTab {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     padding: 0.5rem 2rem;
     border-radius: var(--radius-sm);
     cursor: pointer;

@@ -7,6 +7,7 @@ import Button from '../components/ui/Button/Button';
 import Badge from '../components/ui/Badge/Badge';
 import WatchlistStarButton from '../components/watchlist/WatchlistStarButton/WatchlistStarButton';
 import { CATEGORIES, filterCoinsByCategory } from '../config/categoryData';
+import PriceCell from '../components/markets/PriceCell';
 import styles from './Markets.module.css';
 
 const Markets = () => {
@@ -209,7 +210,9 @@ const Markets = () => {
                                         </div>
                                     </div>
                                 </td>
-                                <td className={styles.price}>${coin.current_price?.toLocaleString()}</td>
+                                <td className={styles.price}>
+                                    <PriceCell price={coin.current_price} coinId={coin.id} />
+                                </td>
                                 <td>
                                     <Badge variant={(coin.price_change_percentage_24h || 0) >= 0 ? 'success' : 'danger'}>
                                         {(coin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}

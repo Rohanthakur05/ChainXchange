@@ -9,6 +9,7 @@ import { useToast } from '../components/ui/Toast';
 import Button from '../components/ui/Button/Button';
 import Input from '../components/ui/Input/Input';
 import Badge from '../components/ui/Badge/Badge';
+import ShortcutBadge from '../components/ui/ShortcutBadge';
 import TradingViewChart from '../components/charts/TradingViewChart';
 import CreateAlertModal from '../components/alerts/CreateAlertModal';
 import ConfirmationModal from '../components/ui/ConfirmationModal';
@@ -528,13 +529,15 @@ const CryptoDetail = () => {
                         className={`${styles.tradeTab} ${tradeType === 'buy' ? styles.active : ''}`}
                         onClick={() => setTradeType('buy')}
                     >
-                        Buy
+                        <span>Buy</span>
+                        <ShortcutBadge shortcutKey="B" />
                     </div>
                     <div
                         className={`${styles.tradeTab} ${tradeType === 'sell' ? styles.active : ''}`}
                         onClick={() => setTradeType('sell')}
                     >
-                        Sell
+                        <span>Sell</span>
+                        <ShortcutBadge shortcutKey="S" />
                     </div>
                 </div>
 

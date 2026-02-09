@@ -1,11 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 import Badge from '../components/ui/Badge/Badge';
+import HistoryFilters from '../components/history/HistoryFilters';
+import ExportButton from '../components/ui/ExportButton';
+import useHistoryFilters from '../hooks/useHistoryFilters';
+import { exportToCSV, HISTORY_COLUMNS } from '../utils/exportUtils';
 import styles from './History.module.css';
 
 const History = () => {
     const [data, setData] = useState({ transactions: [] });
     const [loading, setLoading] = useState(true);
+
+    // Use filter hook for client-side filtering
+    const {
+        filters,
+        setFilters,
+        clearFilters,
+        filteredData,
+        hasActiveFilters,
+        uniqueCoins
+    } = useHistoryFilters(data.transactions);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -25,12 +39,42 @@ const History = () => {
 
     return (
         <div className={styles.historyContainer}>
-            <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: '#fff' }}>Transaction History</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Review your trading activity</p>
+            <div className={styles.header}>
+                <div>
+                    <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: '#fff' }}>Transaction History</h1>
+                    <p style={{ color: 'var(--text-secondary)' }}>Review your trading activity</p>
+                </div>
+                <ExportButton
+                    onExport={() => {
+                        const timestamp = new Date().toISOString().split('T')[0];
+                        exportToCSV(filteredData, HISTORY_COLUMNS, `trade_history_${timestamp}`);
+                    }}
+                    disabled={filteredData.length === 0}
+                    label="Export CSV"
+                />
+            </div>
 
-            {data.transactions.length === 0 ? (
-                <div style={{ marginTop: '2rem', padding: '2rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
-                    No transactions found.
+            {/* Filters */}
+            <HistoryFilters
+                filters={filters}
+                onFilterChange={setFilters}
+                onClear={clearFilters}
+                coins={uniqueCoins}
+                hasActiveFilters={hasActiveFilters}
+            />
+
+            {/* Results count when filtering */}
+            {hasActiveFilters && (
+                <div className={styles.resultsCount}>
+                    Showing {filteredData.length} of {data.transactions.length} transactions
+                </div>
+            )}
+
+            {filteredData.length === 0 ? (
+                <div style={{ marginTop: '1rem', padding: '2rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+                    {hasActiveFilters
+                        ? 'No transactions match your filters.'
+                        : 'No transactions found.'}
                 </div>
             ) : (
                 <div className={styles.tableWrapper}>
@@ -46,7 +90,7 @@ const History = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {data.transactions.map((tx) => (
+                            {filteredData.map((tx) => (
                                 <tr key={tx._id}>
                                     <td>
                                         <Badge variant={tx.type === 'buy' ? 'success' : 'danger'}>
