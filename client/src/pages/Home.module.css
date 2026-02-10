@@ -5,6 +5,7 @@
     flex-direction: column;
 }
 
+/* ===== HERO ===== */
 .hero {
     flex: 1;
     display: flex;
@@ -18,6 +19,7 @@
     overflow: hidden;
 }
 
+/* Ambient gradient glow */
 .hero::before {
     content: '';
     position: absolute;
@@ -32,6 +34,19 @@
     pointer-events: none;
     z-index: 0;
     will-change: transform;
+}
+
+/* §7 — Noise grain overlay to reduce color banding */
+.hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px 128px;
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 0;
 }
 
 @keyframes ambientDrift {
@@ -77,26 +92,35 @@
     z-index: 1;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .hero::before {
-        animation: none;
-    }
-}
 
-/* Ticker */
+/* ===== §4 — TICKER REFINEMENT ===== */
 .tickerWrap {
     width: 100%;
-    background-color: var(--bg-card);
-    border-top: 1px solid var(--border-subtle);
-    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(22, 27, 34, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(48, 54, 61, 0.5);
+    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
     overflow: hidden;
     padding: 0.75rem 0;
     white-space: nowrap;
+    /* §6 — Focus lock: initial hidden state */
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(4px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s,
+        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s,
+        filter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
 }
 
 .ticker {
     display: inline-block;
-    animation: ticker 30s linear infinite;
+    animation: ticker 45s linear infinite;
+}
+
+/* Pause ticker on hover for scannability */
+.tickerWrap:hover .ticker {
+    animation-play-state: paused;
 }
 
 .tickerItem {
@@ -105,6 +129,18 @@
     font-family: var(--font-mono);
     font-weight: 500;
     color: var(--text-primary);
+    transition: color 0.4s ease-out;
+}
+
+/* Color-coded ticker items */
+.tickerUp {
+    color: rgba(0, 200, 83, 0.85);
+    text-shadow: 0 0 12px rgba(0, 200, 83, 0.12);
+}
+
+.tickerDown {
+    color: rgba(255, 82, 82, 0.85);
+    text-shadow: 0 0 12px rgba(255, 82, 82, 0.12);
 }
 
 @keyframes ticker {
@@ -117,7 +153,8 @@
     }
 }
 
-/* Features */
+
+/* ===== §5 — FLOATING FEATURE CARDS ===== */
 .features {
     padding: 4rem 2rem;
     display: grid;
@@ -126,25 +163,120 @@
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
+    /* §6 — Focus lock: initial hidden state */
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(4px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s,
+        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s,
+        filter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s;
 }
 
 .featureCard {
     background: var(--bg-card);
     padding: 2rem;
     border-radius: var(--radius-lg);
-    border: 1px solid var(--border-subtle);
+    border: 1px solid transparent;
     text-align: center;
-    transition: transform var(--transition-fast);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: transform 0.4s ease-out, box-shadow 0.4s ease-out, border-color 0.4s ease-out;
+    /* §5 — Entrance: start hidden */
+    opacity: 0;
+    transform: translateY(24px);
 }
 
 .featureCard:hover {
     transform: translateY(-5px);
-    border-color: var(--border-color);
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 24px rgba(35, 134, 54, 0.06);
+}
+
+/* §5 — Entrance animation (one-time, triggered by JS) */
+.cardVisible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hover still works after entrance */
+.cardVisible:hover {
+    transform: translateY(-5px);
 }
 
 .featureIcon {
     color: var(--color-buy);
     margin-bottom: 1rem;
+    display: inline-flex;
+}
+
+/* §5 — One-time icon animations */
+.iconPulse {
+    animation: iconPulseKf 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.iconDraw {
+    animation: iconDrawKf 0.8s ease-out forwards;
+}
+
+.iconFlash {
+    animation: iconFlashKf 0.5s ease-out forwards;
+}
+
+@keyframes iconPulseKf {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: scale(1.18);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes iconDrawKf {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) rotate(-5deg);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1.05) rotate(1deg);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+    }
+}
+
+@keyframes iconFlashKf {
+    0% {
+        opacity: 0.2;
+        filter: brightness(2);
+    }
+
+    40% {
+        opacity: 1;
+        filter: brightness(1.5);
+    }
+
+    100% {
+        opacity: 1;
+        filter: brightness(1);
+    }
 }
 
 .featureTitle {
@@ -156,4 +288,48 @@
 .featureText {
     color: var(--text-secondary);
     font-size: 0.95rem;
+}
+
+
+/* ===== §6 — FOCUS LOCK REVEAL ===== */
+.unlocked .tickerWrap,
+.unlocked .features {
+    opacity: 1;
+    transform: translateY(0);
+    filter: none;
+}
+
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+    .hero::before {
+        animation: none;
+    }
+
+    .ticker {
+        animation: none;
+    }
+
+    .tickerWrap,
+    .features {
+        opacity: 1;
+        transform: none;
+        filter: none;
+        transition: none;
+    }
+
+    .featureCard {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .iconPulse,
+    .iconDraw,
+    .iconFlash {
+        animation: none;
+        opacity: 1;
+        transform: none;
+        filter: none;
+    }
 }
