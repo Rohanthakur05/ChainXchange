@@ -6,6 +6,38 @@
     justify-content: center;
     padding: 1rem;
     background: radial-gradient(circle at top right, #1b2735 0%, #0E1117 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.authContainer::before {
+    content: '';
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(ellipse at center,
+            rgba(35, 134, 54, 0.18) 0%,
+            rgba(31, 111, 235, 0.10) 40%,
+            transparent 70%);
+    opacity: 0.12;
+    filter: blur(80px);
+    animation: ambientDrift 12s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+}
+
+@keyframes ambientDrift {
+    0% {
+        transform: translate(-30%, -20%) scale(1);
+    }
+
+    50% {
+        transform: translate(30%, 20%) scale(1.15);
+    }
+
+    100% {
+        transform: translate(-30%, -20%) scale(1);
+    }
 }
 
 .authCard {
@@ -16,6 +48,14 @@
     width: 100%;
     max-width: 420px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .authContainer::before {
+        animation: none;
+    }
 }
 
 .title {

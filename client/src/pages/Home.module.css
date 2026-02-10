@@ -14,6 +14,38 @@
     text-align: center;
     padding: 4rem 2rem;
     background: radial-gradient(circle at center, #1b2735 0%, var(--bg-primary) 70%);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(ellipse at center,
+            rgba(35, 134, 54, 0.18) 0%,
+            rgba(31, 111, 235, 0.10) 40%,
+            transparent 70%);
+    opacity: 0.12;
+    filter: blur(80px);
+    animation: ambientDrift 12s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+}
+
+@keyframes ambientDrift {
+    0% {
+        transform: translate(-30%, -20%) scale(1);
+    }
+
+    50% {
+        transform: translate(30%, 20%) scale(1.15);
+    }
+
+    100% {
+        transform: translate(-30%, -20%) scale(1);
+    }
 }
 
 .title {
@@ -22,7 +54,10 @@
     margin-bottom: 1rem;
     background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+    position: relative;
+    z-index: 1;
 }
 
 .subtitle {
@@ -30,12 +65,22 @@
     color: var(--text-secondary);
     margin-bottom: 2.5rem;
     max-width: 600px;
+    position: relative;
+    z-index: 1;
 }
 
 .ctaGroup {
     display: flex;
     gap: 1rem;
     margin-bottom: 4rem;
+    position: relative;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero::before {
+        animation: none;
+    }
 }
 
 /* Ticker */

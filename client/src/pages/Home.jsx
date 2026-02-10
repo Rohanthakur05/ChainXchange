@@ -2,12 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Shield, Zap, Activity } from 'lucide-react';
 import Button from '../components/ui/Button/Button';
+import TraderClock from '../components/TraderClock';
 import styles from './Home.module.css';
 
 const Home = () => {
     return (
         <div className={styles.container}>
             <section className={styles.hero}>
+                <TraderClock />
                 <h1 className={styles.title}>Trade Smarter. Not Harder.</h1>
                 <p className={styles.subtitle}>
                     Execute trades with precision. Real-time prices, advanced charts, and secure wallet management all in one place.

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import TraderClock from '../components/TraderClock';
 import styles from './Auth.module.css';
 
 const Signup = ({ onSignupSuccess }) => {
@@ -30,6 +31,7 @@ const Signup = ({ onSignupSuccess }) => {
 
     return (
         <div className={styles.authContainer}>
+            <TraderClock />
             <div className={styles.authCard}>
                 <h2 className={styles.title}>Create Account</h2>
 
@@ -83,4 +85,5 @@ const Signup = ({ onSignupSuccess }) => {
 };
 
 export default Signup;
+
 
