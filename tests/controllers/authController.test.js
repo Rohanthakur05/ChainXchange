@@ -1,141 +1,149 @@
 const request = require('supertest');
 const express = require('express');
-const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
-const authController = require('../../controllers/authController');
+
+// Mock bcrypt and User model before requiring controller
+jest.mock('bcrypt');
+jest.mock('../../models/User');
+jest.mock('../../models/Transaction');
+
+const bcrypt = require('bcrypt');
 const User = require('../../models/User');
+const authController = require('../../controllers/authController');
 
-// Mock the User model
-jest.mock('..\/..\/...\/..\/models/User');
-
+// Build minimal express app matching the real app setup
 const app = express();
-app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(session({
-  secret: 'test-secret',
-  resave: false,
-  saveUninitialized: true,
-}));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser('test-secret'));
 
-// Mock res.render
-app.use((req, res, next) => {
-  res.render = (view, options) => {
-    res.send({ view, options });
-  };
-  res.redirect = (url) => {
-    res.send({ redirect: url });
-  };
-  res.cookie = jest.fn();
-  next();
+app.post('/auth/signup', authController.signup);
+app.post('/auth/login', authController.login);
+app.get('/auth/logout', authController.logout);
+
+// ─────────────────────────────────────────
+// signup
+// ─────────────────────────────────────────
+describe('POST /auth/signup', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('should return 400 if fields are missing', async () => {
+    const res = await request(app)
+      .post('/auth/signup')
+      .send({ username: 'testuser', email: 'test@test.com' }); // missing password
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('All fields are required.');
+  });
+
+  it('should return 409 if username or email already exists', async () => {
+    User.findOne.mockResolvedValue({ username: 'testuser' });
+
+    const res = await request(app)
+      .post('/auth/signup')
+      .send({ username: 'testuser', email: 'test@test.com', password: 'password123' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Username or email already exists.');
+  });
+
+  it('should return 201 and user data on successful signup', async () => {
+    User.findOne.mockResolvedValue(null);
+    bcrypt.hash.mockResolvedValue('hashedpassword');
+
+    const savedUser = {
+      _id: 'user-id-123',
+      username: 'newuser',
+      email: 'new@test.com',
+      wallet: 0,
+    };
+    // Mock the User constructor and save()
+    User.mockImplementation(() => ({
+      save: jest.fn().mockResolvedValue(savedUser),
+      ...savedUser,
+    }));
+
+    const res = await request(app)
+      .post('/auth/signup')
+      .send({ username: 'newuser', email: 'new@test.com', password: 'password123' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.message).toBe('Signup successful');
+  });
 });
 
-app.get('/signup', authController.showSignup);
-app.post('/signup', authController.signup);
-app.get('/login', authController.showLogin);
-app.post('/login', authController.login);
-app.get('/logout', authController.logout);
-app.get('/profile', authController.showProfile);
+// ─────────────────────────────────────────
+// login
+// ─────────────────────────────────────────
+describe('POST /auth/login', () => {
+  beforeEach(() => jest.clearAllMocks());
 
-describe('Auth Controller', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
+  it('should return 400 if fields are missing', async () => {
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ username: 'testuser' }); // missing password
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Username and password are required.');
   });
 
-  describe('showSignup', () => {
-    it('should render the signup page', async () => {
-      const res = await request(app).get('/signup');
-      expect(res.status).toBe(200);
-      expect(res.body.view).toBe('signup');
-      expect(res.body.options.title).toBe('Sign Up');
-    });
+  it('should return 401 if user is not found', async () => {
+    User.findOne.mockResolvedValue(null);
+
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ username: 'ghost', password: 'wrongpassword' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('Invalid username or password.');
   });
 
-  describe('signup', () => {
-    it('should create a new user and redirect to profile', async () => {
-      User.findOne.mockResolvedValue(null);
-      User.prototype.save = jest.fn().mockResolvedValue({ _id: 'some-id' });
-
-      const res = await request(app)
-        .post('/signup')
-        .send({ username: 'testuser', email: 'test@test.com', password: 'password' });
-
-      expect(res.status).toBe(200);
-      expect(User.findOne).toHaveBeenCalledTimes(1);
-      expect(User.prototype.save).toHaveBeenCalledTimes(1);
-      expect(res.body.redirect).toBe('/profile');
+  it('should return 401 if password is incorrect', async () => {
+    User.findOne.mockResolvedValue({
+      _id: 'user-id-123',
+      username: 'testuser',
+      password: 'hashedpassword',
     });
+    bcrypt.compare.mockResolvedValue(false);
 
-    it('should return an error if fields are missing', async () => {
-        const res = await request(app)
-          .post('/signup')
-          .send({ username: 'testuser', email: 'test@test.com' });
-  
-        expect(res.status).toBe(200);
-        expect(res.body.options.error).toBe('All fields are required.');
-      });
-  
-      it('should return an error if user already exists', async () => {
-        User.findOne.mockResolvedValue({ username: 'testuser' });
-  
-        const res = await request(app)
-          .post('/signup')
-          .send({ username: 'testuser', email: 'test@test.com', password: 'password' });
-  
-        expect(res.status).toBe(200);
-        expect(res.body.options.error).toBe('Username or email already exists.');
-      });
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ username: 'testuser', password: 'wrongpassword' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('Invalid username or password.');
   });
 
-  describe('showLogin', () => {
-    it('should render the login page', async () => {
-      const res = await request(app).get('/login');
-      expect(res.status).toBe(200);
-      expect(res.body.view).toBe('login');
-      expect(res.body.options.title).toBe('Login');
-    });
+  it('should return 200 and user data on successful login', async () => {
+    const mockUser = {
+      _id: 'user-id-123',
+      username: 'testuser',
+      email: 'test@test.com',
+      wallet: 500,
+      password: 'hashedpassword',
+    };
+    User.findOne.mockResolvedValue(mockUser);
+    bcrypt.compare.mockResolvedValue(true);
+
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ username: 'testuser', password: 'correctpassword' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Login successful');
+    expect(res.body.user.username).toBe('testuser');
   });
-
-  describe('login', () => {
-    it('should login a user and redirect to profile', async () => {
-        const bcrypt = require('bcrypt');
-        const user = {
-            _id: 'some-id',
-            username: 'testuser',
-            password: await bcrypt.hash('password', 10),
-        };
-        User.findOne.mockResolvedValue(user);
-        const bcryptCompare = jest.spyOn(require('bcrypt'), 'compare');
-        bcryptCompare.mockResolvedValue(true);
-
-
-        const res = await request(app)
-            .post('/login')
-            .send({ username: 'testuser', password: 'password' });
-
-        expect(res.status).toBe(200);
-        expect(User.findOne).toHaveBeenCalledTimes(1);
-        expect(res.body.redirect).toBe('/profile');
-    });
-
-    it('should return an error for invalid credentials', async () => {
-        User.findOne.mockResolvedValue(null);
-
-        const res = await request(app)
-            .post('/login')
-            .send({ username: 'wronguser', password: 'wrongpassword' });
-
-        expect(res.status).toBe(200);
-        expect(res.body.options.error).toBe('Invalid username or password.');
-    });
-  });
-
-  describe('logout', () => {
-    it('should log the user out and redirect to home', async () => {
-        const res = await request(app).get('/logout');
-        expect(res.status).toBe(200);
-        expect(res.body.redirect).toBe('/');
-    });
-  });
-
 });
 
+// ─────────────────────────────────────────
+// logout
+// ─────────────────────────────────────────
+describe('GET /auth/logout', () => {
+  it('should clear the cookie and return success', async () => {
+    const res = await request(app).get('/auth/logout');
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Logged out successfully');
+  });
+});

@@ -318,8 +318,16 @@ export const parseError = (error, context = {}) => {
     }
 
     // Use backend message if it's more specific
+    // Apply to auth/validation errors too so users see the real reason (e.g. "Invalid username or password.")
     const backendMessage = error.response?.data?.error || error.response?.data?.message;
-    if (backendMessage && backendMessage.length < 100 && code === ErrorCode.UNKNOWN) {
+    const useBackendMessage = [
+        ErrorCode.UNKNOWN,
+        ErrorCode.AUTH_REQUIRED,
+        ErrorCode.AUTH_INVALID_CREDENTIALS,
+        ErrorCode.AUTH_SESSION_EXPIRED,
+        ErrorCode.API_BAD_REQUEST,
+    ];
+    if (backendMessage && backendMessage.length < 100 && useBackendMessage.includes(code)) {
         parsed.message = backendMessage;
     }
 
