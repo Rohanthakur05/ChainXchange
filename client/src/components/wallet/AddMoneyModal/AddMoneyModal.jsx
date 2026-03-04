@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { X, CreditCard, Building2, Smartphone, Shield, ChevronRight, ChevronLeft, Check, Loader2 } from 'lucide-react';
 import { useWallet } from '../../../context/WalletContext';
 import api from '../../../utils/api';
@@ -62,6 +62,8 @@ const AddMoneyModal = ({ isOpen, onClose }) => {
     // Transaction state
     const [status, setStatus] = useState('idle'); // idle, processing, success, error
     const [errorMessage, setErrorMessage] = useState('');
+    const [errorCode, setErrorCode] = useState('');
+    const idempotencyKeyRef = useRef(null);
 
     // Reset modal state
     const resetModal = useCallback(() => {
@@ -79,6 +81,8 @@ const AddMoneyModal = ({ isOpen, onClose }) => {
         setBankHolder('');
         setStatus('idle');
         setErrorMessage('');
+        setErrorCode('');
+        idempotencyKeyRef.current = null;
     }, []);
 
     const handleClose = () => {
@@ -122,15 +126,34 @@ const AddMoneyModal = ({ isOpen, onClose }) => {
         }
     };
 
+    // Generate a unique idempotency key for this payment attempt
+    const generateIdempotencyKey = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        // Fallback for older browsers
+        return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    };
+
     // Submit payment
     const handleSubmit = async () => {
+        // Prevent double-click: if already processing, ignore
+        if (status === 'processing') return;
+
         setStatus('processing');
         setErrorMessage('');
+        setErrorCode('');
+
+        // Generate idempotency key once per submission (reuse on retry)
+        if (!idempotencyKeyRef.current) {
+            idempotencyKeyRef.current = generateIdempotencyKey();
+        }
 
         try {
             const payload = {
                 amount: parseFloat(amount),
                 paymentMethod,
+                idempotencyKey: idempotencyKeyRef.current,
                 ...(paymentMethod === 'upi' && { upiId }),
                 ...(paymentMethod === 'card' && {
                     cardNumber: cardNumber.replace(/\s/g, ''),
@@ -146,7 +169,7 @@ const AddMoneyModal = ({ isOpen, onClose }) => {
                 })
             };
 
-            await api.post('/payment/add-money', payload);
+            const response = await api.post('/payment/add-money', payload);
 
             // Sync wallet to update balance everywhere
             await syncWallet();
@@ -159,7 +182,14 @@ const AddMoneyModal = ({ isOpen, onClose }) => {
             }, 2000);
         } catch (err) {
             setStatus('error');
-            setErrorMessage(err.response?.data?.error || 'Payment failed. Please try again.');
+            const serverError = err.response?.data;
+            setErrorMessage(serverError?.error || 'Payment failed. Please try again.');
+            setErrorCode(serverError?.code || '');
+
+            // On duplicate, don't allow retry with same key
+            if (serverError?.code === 'DUPLICATE_PAYMENT') {
+                idempotencyKeyRef.current = null;
+            }
         }
     };
 
@@ -423,7 +453,14 @@ const AddMoneyModal = ({ isOpen, onClose }) => {
                             {status === 'error' && (
                                 <div className={styles.statusDisplay}>
                                     <p className={styles.errorText}>{errorMessage}</p>
-                                    <button className={styles.retryBtn} onClick={() => setStatus('idle')}>
+                                    {errorCode && (
+                                        <p className={styles.errorCode}>Code: {errorCode}</p>
+                                    )}
+                                    <button className={styles.retryBtn} onClick={() => {
+                                        // Generate fresh idempotency key for retry
+                                        idempotencyKeyRef.current = null;
+                                        setStatus('idle');
+                                    }}>
                                         Try Again
                                     </button>
                                 </div>

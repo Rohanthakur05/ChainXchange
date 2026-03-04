@@ -13,25 +13,59 @@ const paymentTransactionSchema = new mongoose.Schema({
     },
     amount: {
         type: Number,
+        required: true,
+        min: [0.01, 'Amount must be positive']
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['upi', 'card', 'bank', 'instant'],
         required: true
     },
+    // Card fields (optional — only for card payments)
     cardNumber: {
-        type: String,
-        required: true
+        type: String
     },
     cardHolder: {
+        type: String
+    },
+    // UPI fields (optional — only for UPI payments)
+    upiId: {
+        type: String
+    },
+    // Bank transfer fields (optional — only for bank payments)
+    bankAccount: {
+        type: String
+    },
+    bankIfsc: {
+        type: String
+    },
+    bankName: {
+        type: String
+    },
+    bankHolder: {
+        type: String
+    },
+    // Idempotency key to prevent duplicate transactions
+    idempotencyKey: {
         type: String,
-        required: true
+        unique: true,
+        sparse: true // allows nulls, but enforces uniqueness when present
     },
     status: {
         type: String,
         enum: ['pending', 'completed', 'failed'],
-        default: 'completed'
+        default: 'pending'
+    },
+    failureReason: {
+        type: String
     },
     timestamp: {
         type: Date,
         default: Date.now
     }
 }, { timestamps: true });
+
+// Index for efficient user transaction lookups
+paymentTransactionSchema.index({ userId: 1, timestamp: -1 });
 
 module.exports = mongoose.model('PaymentTransaction', paymentTransactionSchema);
