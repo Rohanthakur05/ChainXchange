@@ -21,12 +21,25 @@ const Topbar = () => {
     const [addMoneyOpen, setAddMoneyOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [user, setUser] = useState(null);
 
     useEffect(() => {
         fetchNotifications();
+        fetchUser();
         const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    const fetchUser = async () => {
+        try {
+            const response = await api.get('/auth/profile');
+            if (response.data?.user) {
+                setUser(response.data.user);
+            }
+        } catch (error) {
+            console.error('Failed to fetch user profile', error);
+        }
+    };
 
     const fetchNotifications = async () => {
         try {
@@ -99,6 +112,8 @@ const Topbar = () => {
         ? 'Loading...'
         : `$${wallet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+    const userInitial = user?.username ? user.username.charAt(0).toUpperCase() : <User size={18} />;
+
     return (
         <>
             <header className={styles.topbar}>
@@ -128,7 +143,7 @@ const Topbar = () => {
                             onClick={() => setAddMoneyOpen(true)}
                             title="Add Money"
                         >
-                            <Plus size={14} />
+                            <Plus size={16} />
                         </button>
                     </div>
 
@@ -181,7 +196,7 @@ const Topbar = () => {
                                 onClick={toggleProfile}
                             >
                                 <div className={styles.avatar}>
-                                    <User size={18} />
+                                    {userInitial}
                                 </div>
                                 <ChevronDown size={14} className={`${styles.chevron} ${profileOpen ? styles.chevronOpen : ''}`} />
                             </button>

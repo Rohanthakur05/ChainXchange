@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════
+   Movers Panel — Top Gainers / Losers Widget
+   ═══════════════════════════════════════════════════════ */
+
 .moversContainer {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -5,10 +9,15 @@
 }
 
 .panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
     overflow: hidden;
+    transition: border-color 0.25s ease;
+}
+
+.panel:hover {
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .panelHeader {
@@ -16,7 +25,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .panelTitle {
@@ -27,28 +36,30 @@
 
 .panelTitle h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
+    letter-spacing: -0.01em;
 }
 
 .iconGain {
-    color: var(--color-buy, #00c853);
+    color: #00E676;
 }
 
 .iconLoss {
-    color: var(--color-sell, #ea3943);
+    color: #ff5252;
 }
 
 .viewAll {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
-    color: var(--text-link);
+    color: var(--text-muted);
     text-decoration: none;
-    transition: color 0.15s ease;
+    transition: color 0.2s ease;
+    letter-spacing: 0.02em;
 }
 
 .viewAll:hover {
@@ -68,8 +79,8 @@
     gap: 12px;
     padding: 12px 20px;
     text-decoration: none;
-    border-bottom: 1px solid var(--border-subtle);
-    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: all 0.2s ease;
 }
 
 .moverRow:last-child {
@@ -77,20 +88,22 @@
 }
 
 .moverRow:hover {
-    background: var(--bg-secondary);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .rank {
     font-size: 12px;
     font-weight: 500;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.2);
     text-align: center;
+    font-family: var(--font-mono);
 }
 
 .coinIcon {
     width: 28px;
     height: 28px;
     border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .coinInfo {
@@ -101,21 +114,22 @@
 }
 
 .symbol {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
+    letter-spacing: 0.02em;
 }
 
 .name {
     font-size: 11px;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.25);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .price {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
     font-family: var(--font-mono);
@@ -126,22 +140,23 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     padding: 4px 10px;
-    border-radius: var(--radius-sm);
+    border-radius: 20px;
     min-width: 80px;
     justify-content: center;
+    letter-spacing: 0.01em;
 }
 
 .change.positive {
-    color: var(--color-buy, #00c853);
+    color: #00E676;
     background: rgba(0, 200, 83, 0.1);
 }
 
 .change.negative {
-    color: var(--color-sell, #ea3943);
-    background: rgba(234, 57, 67, 0.1);
+    color: #ff5252;
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .emptyState {

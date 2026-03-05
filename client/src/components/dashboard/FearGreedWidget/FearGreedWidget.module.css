@@ -1,11 +1,20 @@
+/* ═══════════════════════════════════════════════════════
+   Fear & Greed Widget — Sentiment Gauge
+   ═══════════════════════════════════════════════════════ */
+
 .widget {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    transition: border-color 0.25s ease;
+}
+
+.widget:hover {
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .header {
@@ -15,19 +24,20 @@
 }
 
 .title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
+    letter-spacing: -0.01em;
 }
 
 .refreshBtn {
-    background: transparent;
-    border: none;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--text-muted);
     cursor: pointer;
-    padding: 4px;
-    border-radius: var(--radius-sm);
+    padding: 5px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -35,7 +45,8 @@
 }
 
 .refreshBtn:hover {
-    background: var(--bg-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
 }
 
@@ -62,14 +73,15 @@
     height: 140px;
     border-radius: 50%;
     background: conic-gradient(from 180deg,
-            #ea3943 0deg,
-            #f5a623 45deg,
+            #ff5252 0deg,
+            #FF9800 45deg,
             #808080 90deg,
-            #83bf6e 135deg,
-            #00c853 180deg,
+            #66BB6A 135deg,
+            #00E676 180deg,
             transparent 180deg);
     -webkit-mask: radial-gradient(transparent 45px, black 46px, black 62px, transparent 63px);
     mask: radial-gradient(transparent 45px, black 46px, black 62px, transparent 63px);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.05));
 }
 
 .gaugeNeedle {
@@ -99,6 +111,7 @@
     height: 12px;
     background: var(--needle-color, var(--text-primary));
     border-radius: 50%;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .gaugeCenter {
@@ -126,15 +139,19 @@
 }
 
 .labelFear {
-    font-size: 11px;
-    color: #ea3943;
-    font-weight: 500;
+    font-size: 10px;
+    color: #ff5252;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .labelGreed {
-    font-size: 11px;
-    color: #00c853;
-    font-weight: 500;
+    font-size: 10px;
+    color: #00E676;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 /* ===== SENTIMENT INFO ===== */
@@ -149,16 +166,17 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    border-radius: var(--radius-full, 9999px);
-    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
     font-weight: 600;
     border: 1px solid;
+    letter-spacing: 0.02em;
 }
 
 .timestamp {
     font-size: 11px;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.2);
 }
 
 /* ===== LOADING STATE ===== */
@@ -175,8 +193,8 @@
 .spinner {
     width: 24px;
     height: 24px;
-    border: 2px solid var(--border-subtle);
-    border-top-color: var(--text-link);
+    border: 2px solid rgba(255, 255, 255, 0.06);
+    border-top-color: #667eea;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }

@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════
+   Theme Toggle — Consistent with Topbar iconBtn style
+   ═══════════════════════════════════════════════════════ */
+
 .toggle {
     position: relative;
     display: flex;
@@ -5,29 +9,22 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
     cursor: pointer;
-    transition: background-color 0.15s;
+    transition: all 0.2s ease;
     overflow: hidden;
 }
 
 .toggle:hover {
-    background: var(--bg-secondary);
-}
-
-.toggle:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-brand);
-}
-
-.toggle:focus:not(:focus-visible) {
-    box-shadow: none;
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 .toggle:focus-visible {
-    box-shadow: 0 0 0 2px var(--color-brand);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
 }
 
 /* Icon container */
@@ -36,8 +33,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    color: rgba(255, 255, 255, 0.4);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
     opacity: 0;
     transform: rotate(-90deg) scale(0.5);
 }
@@ -49,7 +46,7 @@
 
 /* Hover effect on active icon */
 .toggle:hover .icon.active {
-    color: var(--text-primary);
+    color: var(--text-primary, #ffffff);
 }
 
 /* Subtle glow effect for sun icon in light mode */
@@ -60,4 +57,5 @@
 /* Subtle glow effect for moon icon in dark mode */
 [data-theme="dark"] .toggle:hover .icon.active {
     color: #818CF8;
+    filter: drop-shadow(0 0 5px rgba(129, 140, 248, 0.4));
 }

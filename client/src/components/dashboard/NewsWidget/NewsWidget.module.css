@@ -1,11 +1,20 @@
+/* ═══════════════════════════════════════════════════════
+   News Widget — Crypto News Feed Card
+   ═══════════════════════════════════════════════════════ */
+
 .widget {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
+    transition: border-color 0.25s ease;
+}
+
+.widget:hover {
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .header {
@@ -21,23 +30,24 @@
 }
 
 .icon {
-    color: var(--text-link);
+    color: #667eea;
 }
 
 .title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
+    letter-spacing: -0.01em;
 }
 
 .refreshBtn {
-    background: transparent;
-    border: none;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--text-muted);
     cursor: pointer;
-    padding: 4px;
-    border-radius: var(--radius-sm);
+    padding: 5px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -45,7 +55,8 @@
 }
 
 .refreshBtn:hover {
-    background: var(--bg-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
 }
 
@@ -54,11 +65,13 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
-    background: rgba(245, 166, 35, 0.1);
-    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    background: rgba(245, 166, 35, 0.08);
+    border: 1px solid rgba(245, 166, 35, 0.12);
+    border-radius: 8px;
     color: #f5a623;
     font-size: 11px;
+    font-weight: 500;
 }
 
 /* ===== NEWS LIST ===== */
@@ -68,6 +81,8 @@
     gap: 2px;
     max-height: 280px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
 }
 
 .newsItem {
@@ -76,18 +91,18 @@
     justify-content: space-between;
     gap: 12px;
     padding: 10px;
-    border-radius: var(--radius-md);
+    border-radius: 10px;
     text-decoration: none;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .newsItem:hover {
-    background: var(--bg-secondary);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .newsItem:hover .linkIcon {
     opacity: 1;
-    color: var(--text-link);
+    color: #667eea;
 }
 
 .newsContent {
@@ -103,7 +118,7 @@
     font-weight: 500;
     color: var(--text-primary);
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.45;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -119,8 +134,9 @@
 
 .source {
     font-size: 11px;
-    color: var(--text-link);
-    font-weight: 500;
+    color: #667eea;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .time {
@@ -128,15 +144,15 @@
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.25);
 }
 
 .linkIcon {
     color: var(--text-muted);
-    opacity: 0.5;
+    opacity: 0.3;
     flex-shrink: 0;
     margin-top: 2px;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 /* ===== VIEW ALL LINK ===== */
@@ -145,14 +161,14 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 8px;
-    border-top: 1px solid var(--border-subtle);
+    padding: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
     margin-top: 4px;
     font-size: 12px;
     font-weight: 500;
-    color: var(--text-link);
+    color: var(--text-muted);
     text-decoration: none;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .viewAll:hover {
@@ -173,8 +189,8 @@
 .spinner {
     width: 24px;
     height: 24px;
-    border: 2px solid var(--border-subtle);
-    border-top-color: var(--text-link);
+    border: 2px solid rgba(255, 255, 255, 0.06);
+    border-top-color: #667eea;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -195,10 +211,10 @@
 }
 
 .newsList::-webkit-scrollbar-thumb {
-    background: var(--border-subtle);
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 2px;
 }
 
 .newsList::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
+    background: rgba(255, 255, 255, 0.12);
 }

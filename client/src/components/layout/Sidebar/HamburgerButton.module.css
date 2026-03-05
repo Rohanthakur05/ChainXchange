@@ -1,32 +1,35 @@
+/* ═══════════════════════════════════════════════════════
+   Hamburger Button — Consistent with Topbar iconBtn style
+   ═══════════════════════════════════════════════════════ */
+
 .hamburgerBtn {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 40px;
     height: 40px;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
+    transition: all 0.2s ease;
     flex-shrink: 0;
 }
 
 .hamburgerBtn:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-.hamburgerBtn:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-brand);
-}
-
-.hamburgerBtn:focus:not(:focus-visible) {
-    box-shadow: none;
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary, #ffffff);
 }
 
 .hamburgerBtn:focus-visible {
-    box-shadow: 0 0 0 2px var(--color-brand);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+@media (min-width: 769px) {
+    .hamburgerBtn {
+        /* Hide on desktop if needed, though Topbar.jsx shows it */
+    }
 }
