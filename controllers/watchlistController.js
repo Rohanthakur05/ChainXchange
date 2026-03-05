@@ -10,7 +10,7 @@ class WatchlistController {
      */
     static async getWatchlists(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;
 
             const watchlists = await Watchlist.find({ userId })
                 .sort({ updatedAt: -1 })
@@ -28,7 +28,7 @@ class WatchlistController {
      */
     static async createWatchlist(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;
             const { name } = req.body;
 
             if (!name || !name.trim()) {
@@ -71,7 +71,7 @@ class WatchlistController {
      */
     static async addCoin(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;
             const { watchlistId } = req.params;
             const { coinId } = req.body;
 
@@ -110,7 +110,7 @@ class WatchlistController {
      */
     static async removeCoin(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;
             const { watchlistId, coinId } = req.params;
 
             const watchlist = await Watchlist.findOne({ _id: watchlistId, userId });
@@ -142,7 +142,7 @@ class WatchlistController {
      */
     static async deleteWatchlist(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;
             const { watchlistId } = req.params;
 
             const result = await Watchlist.deleteOne({ _id: watchlistId, userId });
@@ -163,7 +163,7 @@ class WatchlistController {
      */
     static async renameWatchlist(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;
             const { watchlistId } = req.params;
             const { name } = req.body;
 
@@ -206,3 +206,4 @@ class WatchlistController {
 }
 
 module.exports = WatchlistController;
+

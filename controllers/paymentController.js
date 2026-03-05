@@ -27,7 +27,7 @@ class PaymentController {
      */
     static async showWallet(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;
             const user = await User.findById(userId).lean();
 
             if (!user) {
@@ -63,7 +63,7 @@ class PaymentController {
             });
         } catch (error) {
             logPayment('error', 'Wallet page load failed', {
-                userId: req.cookies.user,
+                userId: req.user._id,
                 error: error.message,
                 stack: error.stack
             });
@@ -84,7 +84,7 @@ class PaymentController {
      *  4. Structured logging for every payment attempt
      */
     static async addMoney(req, res) {
-        const userId = req.cookies.user;
+        const userId = req.user._id;
         const {
             amount,
             paymentMethod,
@@ -321,7 +321,7 @@ class PaymentController {
      * Process withdrawal
      */
     static async withdrawMoney(req, res) {
-        const userId = req.cookies.user;
+        const userId = req.user._id;
 
         try {
             const { amount, cardNumber, cardHolder, expiryDate, cvv } = req.body;
@@ -423,3 +423,4 @@ class PaymentController {
 }
 
 module.exports = PaymentController;
+

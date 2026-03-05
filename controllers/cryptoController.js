@@ -159,50 +159,37 @@ class CryptoController {
      * Handle cryptocurrency purchase
      */
     static async buyCrypto(req, res) {
+        const session = await User.startSession();
         try {
             const { coinId, quantity, price } = req.body;
-            const userId = req.cookies.user;
-
-            if (!coinId || !quantity || !price) {
-                return res.status(400).json({ error: 'Missing required fields' });
-            }
+            const userId = req.user._id;  // From JWT middleware
 
             const quantityNum = parseFloat(quantity);
             const priceNum = parseFloat(price);
             const totalCost = quantityNum * priceNum;
 
-            if (isNaN(quantityNum) || quantityNum <= 0 || isNaN(priceNum) || priceNum <= 0) {
-                return res.status(400).json({ error: 'Invalid quantity or price values' });
-            }
+            // Fetch coin metadata (cached, outside transaction)
+            const [user, coinInfo] = await Promise.all([
+                User.findById(userId).lean(),
+                fetchCoinGeckoDataWithCache(
+                    `https://api.coingecko.com/api/v3/coins/${coinId}`,
+                    null,
+                    `coin-info-${coinId}`,
+                    60 * 60 * 1000
+                )
+            ]);
 
-            // Start fetching user and coin data in parallel
-            const userPromise = User.findById(userId).lean();
-            const coinDataPromise = fetchCoinGeckoDataWithCache(
-                `https://api.coingecko.com/api/v3/coins/${coinId}`,
-                null,
-                `coin-info-${coinId}`,
-                60 * 60 * 1000 // 1 hour cache
-            );
-
-            const [user, coinInfo] = await Promise.all([userPromise, coinDataPromise]);
-
-            if (!user) {
-                return res.status(404).json({ error: 'User not found' });
-            }
-
-            if (user.wallet < totalCost) {
-                return res.status(400).json({ error: 'Insufficient funds' });
-            }
+            if (!user) return res.status(404).json({ error: 'User not found' });
+            if (user.wallet < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
 
             const coinData = {
-                name: coinInfo.name || coinId.charAt(0).toUpperCase() + coinId.slice(1),
-                symbol: coinInfo.symbol?.toUpperCase() || coinId.toUpperCase().substring(0, 4),
-                image: coinInfo.image?.large || coinInfo.image?.small || '/images/default-coin.svg'
+                name: coinInfo?.name || coinId.charAt(0).toUpperCase() + coinId.slice(1),
+                symbol: coinInfo?.symbol?.toUpperCase() || coinId.toUpperCase().substring(0, 4),
+                image: coinInfo?.image?.large || coinInfo?.image?.small || '/images/default-coin.svg'
             };
 
-            // Find existing portfolio to calculate new average price
+            // Calculate new average price before transaction
             const existingPortfolio = await Portfolio.findOne({ userId, coinId }).lean();
-
             let newAverageBuyPrice;
             if (existingPortfolio) {
                 const newTotalQuantity = existingPortfolio.quantity + quantityNum;
@@ -211,38 +198,35 @@ class CryptoController {
                 newAverageBuyPrice = priceNum;
             }
 
-            // Perform all database writes and cache invalidation concurrently
-            await Promise.all([
-                User.findByIdAndUpdate(userId, { $inc: { wallet: -totalCost } }),
-                Portfolio.findOneAndUpdate(
-                    { userId, coinId },
-                    {
-                        $set: {
-                            averageBuyPrice: newAverageBuyPrice,
-                            crypto: coinData.name,
-                            image: coinData.image,
-                            symbol: coinData.symbol
-                        },
-                        $inc: { quantity: quantityNum }
-                    },
-                    { upsert: true, new: true }
-                ),
-                Transaction.create({
-                    userId,
-                    type: 'buy',
-                    coinId,
-                    quantity: quantityNum,
-                    price: priceNum,
-                    totalCost,
-                    timestamp: new Date()
-                }),
-                redisClient.del(`portfolio:${userId}`)
-            ]);
+            // ── ATOMIC TRANSACTION ─────────────────────────────────
+            session.startTransaction();
+            await User.findByIdAndUpdate(userId, { $inc: { wallet: -totalCost } }, { session });
+            await Portfolio.findOneAndUpdate(
+                { userId, coinId },
+                {
+                    $set: { averageBuyPrice: newAverageBuyPrice, crypto: coinData.name, image: coinData.image, symbol: coinData.symbol },
+                    $inc: { quantity: quantityNum }
+                },
+                { upsert: true, new: true, session }
+            );
+            await Transaction.create([{
+                userId, type: 'buy', coinId,
+                quantity: quantityNum, price: priceNum, totalCost,
+                timestamp: new Date()
+            }], { session });
+            await session.commitTransaction();
+            // ── END ATOMIC TRANSACTION ──────────────────────────────
 
-            res.json({ message: 'Purchase successful', coinId, quantity: quantityNum });
+            // Invalidate portfolio cache (outside transaction, best-effort)
+            redisClient.del(`portfolio:${userId}`).catch(() => { });
+
+            return res.json({ message: 'Purchase successful', coinId, quantity: quantityNum });
         } catch (error) {
+            await session.abortTransaction().catch(() => { });
             console.error('Buy error:', error);
-            res.status(500).json({ error: error.message || 'Purchase Error' });
+            return res.status(500).json({ error: error.message || 'Purchase failed' });
+        } finally {
+            session.endSession();
         }
     }
 
@@ -250,70 +234,59 @@ class CryptoController {
      * Handle cryptocurrency sale
      */
     static async sellCrypto(req, res) {
+        const session = await User.startSession();
         try {
             const { coinId, quantity, price } = req.body;
-            const userId = req.cookies.user;
-
-            // Validate input
-            if (!coinId || !quantity || !price) {
-                return res.status(400).json({ error: 'Missing required fields' });
-            }
+            const userId = req.user._id;  // From JWT middleware
 
             const quantityNum = parseFloat(quantity);
             const priceNum = parseFloat(price);
             const totalEarnings = quantityNum * priceNum;
 
-            if (isNaN(quantityNum) || quantityNum <= 0 || isNaN(priceNum) || priceNum <= 0) {
-                return res.status(400).json({ error: 'Invalid quantity or price values' });
-            }
-
-            // Find existing portfolio
+            // Pre-flight checks (outside transaction for performance)
             const existingPortfolio = await Portfolio.findOne({ userId, coinId });
             if (!existingPortfolio || existingPortfolio.quantity < quantityNum) {
                 return res.status(400).json({ error: 'Insufficient cryptocurrency holdings' });
             }
 
-            // Update user wallet
-            await User.findByIdAndUpdate(
-                userId,
-                { $inc: { wallet: totalEarnings } }
-            );
+            // ── ATOMIC TRANSACTION ─────────────────────────────────
+            session.startTransaction();
+
+            // Credit wallet
+            await User.findByIdAndUpdate(userId, { $inc: { wallet: totalEarnings } }, { session });
 
             // Update or remove portfolio entry
             const remainingQuantity = existingPortfolio.quantity - quantityNum;
-            if (remainingQuantity <= 0) {
-                await Portfolio.deleteOne({ userId, coinId });
+            if (remainingQuantity <= 0.000000001) {  // Floating-point safe zero check
+                await Portfolio.deleteOne({ userId, coinId }, { session });
             } else {
                 await Portfolio.findOneAndUpdate(
                     { userId, coinId },
-                    { $inc: { quantity: -quantityNum } }
+                    { $inc: { quantity: -quantityNum } },
+                    { session }
                 );
             }
 
-            // Create transaction record
-            await Transaction.create({
-                userId,
-                type: 'sell',
-                coinId,
-                quantity: quantityNum,
-                price: priceNum,
-                totalCost: totalEarnings,
-                timestamp: new Date()
-            });
+            // Log transaction
+            await Transaction.create([{
+                userId, type: 'sell', coinId,
+                quantity: quantityNum, price: priceNum,
+                totalCost: totalEarnings, timestamp: new Date()
+            }], { session });
 
-            // --- CACHE INVALIDATION ---
-            // Clear the cached portfolio data for this user
-            try {
-                await redisClient.del(`portfolio:${userId}`);
-            } catch (cacheError) {
-                console.error(`Redis DEL error for key portfolio:${userId}:`, cacheError.message);
-            }
-            // --- END CACHE INVALIDATION ---
+            await session.commitTransaction();
+            // ── END ATOMIC TRANSACTION ──────────────────────────────
 
-            res.json({ message: `Successfully sold ${quantityNum} ${coinId}` });
+            // Invalidate cache (best-effort, outside transaction)
+            redisClient.del(`portfolio:${userId}`).catch(() => { });
+
+            return res.json({ message: `Successfully sold ${quantityNum} ${coinId}` });
         } catch (error) {
+            await session.abortTransaction().catch(() => { });
             console.error('Sell error:', error);
-            res.status(500).json({ error: error.message });
+            return res.status(500).json({ error: error.message || 'Sell failed' });
+        } finally {
+            session.endSession();
         }
     }
 
@@ -324,7 +297,7 @@ class CryptoController {
     static async executeTrade(req, res) {
         try {
             const { coinId, quantity, type, price } = req.body;
-            const userId = req.cookies.user;
+            const userId = req.user._id;  // From JWT middleware
 
             // Validate required fields
             if (!coinId || !quantity || !type) {
@@ -384,7 +357,7 @@ class CryptoController {
      */
     static async getPortfolio(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;  // From JWT middleware
 
             // --- PORTFOLIO CACHE CHECK ---
             const cacheKey = `portfolio:${userId}`;
@@ -544,7 +517,7 @@ class CryptoController {
      */
     static async getHistory(req, res) {
         try {
-            const userId = req.cookies.user;
+            const userId = req.user._id;  // From JWT middleware
             const user = await User.findById(userId).lean();
 
             if (!user) {
@@ -667,10 +640,7 @@ class CryptoController {
      */
     static async getPortfolioHistory(req, res) {
         try {
-            const userId = req.cookies.user;
-            if (!userId) {
-                return res.status(401).json({ error: 'User not authenticated' });
-            }
+            const userId = req.user._id;  // From JWT middleware
 
             // 1. Get current holdings
             const portfolio = await Portfolio.find({ userId });
@@ -740,7 +710,7 @@ class CryptoController {
     static async getCryptoDetail(req, res) {
         try {
             const { coinId } = req.params;
-            const userId = req.cookies.user;
+            const userId = req.user?._id;  // Optional — works without auth too
 
             // Fetch comprehensive coin data, chart data, and user's holdings in parallel
             const [coinData, chartData, userHolding] = await Promise.all([
