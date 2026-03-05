@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Main green gradient: light top-left → deep forest bottom-right -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#3ddb7a"/>
+      <stop offset="45%"  stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+
+    <!-- Inner glow overlay for depth -->
+    <radialGradient id="glowGrad" cx="30%" cy="28%" r="55%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Clip to rounded square -->
+    <clipPath id="roundSquare">
+      <rect width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+
+    <!-- Drop shadow filter for subtle depth -->
+    <filter id="iconShadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#15803d" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect
+    width="512" height="512"
+    rx="112" ry="112"
+    fill="url(#bgGrad)"
+    filter="url(#iconShadow)"
+  />
+
+  <!-- Radial highlight lens-flare (top-left corner) -->
+  <ellipse
+    cx="160" cy="148"
+    rx="140" ry="120"
+    fill="url(#glowGrad)"
+    clip-path="url(#roundSquare)"
+  />
+
+  <!-- Thin top-edge inner highlight strip -->
+  <rect
+    x="0" y="0" width="512" height="3"
+    rx="3"
+    fill="rgba(255,255,255,0.22)"
+    clip-path="url(#roundSquare)"
+  />
+
+  <!--
+    ═══════════════════════════════════════
+    CX Monogram — production-grade paths
+    Canvas: 512×512, glyph zone: 96–416 (320px wide, 80px padding each side)
+    C: open arc, right side of left half
+    X: two diagonals, right half
+    Stroke: white, 52px, round caps & joins
+    ═══════════════════════════════════════
+  -->
+  <g
+    stroke="#ffffff"
+    stroke-width="52"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  >
+    <!--
+      C — semicircle open on the right
+      Centre: (212, 256), radius 124
+      Arc from top (212, 132) going counter-clockwise to bottom (212, 380)
+      SVG arc: large-arc=1, sweep=0 (counter-clockwise)
+    -->
+    <path d="
+      M 212,132
+      A 124,124 0 1 0 212,380
+    "/>
+
+    <!--
+      X — two crossing diagonals
+      Left bound x=296, Right bound x=428
+      Top y=136, Bottom y=376
+    -->
+    <line x1="296" y1="136" x2="428" y2="376"/>
+    <line x1="428" y1="136" x2="296" y2="376"/>
+  </g>
+</svg>

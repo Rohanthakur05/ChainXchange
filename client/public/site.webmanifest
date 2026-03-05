@@ -1,0 +1,17 @@
+{
+    "name": "ChainXchange",
+    "short_name": "CX",
+    "description": "Professional crypto trading platform",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#020617",
+    "theme_color": "#22c55e",
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

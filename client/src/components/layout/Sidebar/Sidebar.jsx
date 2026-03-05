@@ -2,12 +2,39 @@ import React, { useRef, useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, LineChart, CandlestickChart, Wallet, User,
-    LogOut, X, Link2, ChevronRight
+    LogOut, X, ChevronRight
 } from 'lucide-react';
 import { useSidebar } from '../../../context/SidebarContext';
 import api from '../../../utils/api';
 import styles from './Sidebar.module.css';
 import clsx from 'clsx';
+
+/* ─── ChainXchange CX Monogram SVG Logo ─── */
+const CXLogo = () => (
+    <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+    >
+        {/*
+          C — open arc, left half of a circle centred at (9, 12), radius 6.
+          Starts at top (9, 6) sweeps 270° leaving a gap on the right.
+        */}
+        <path
+            d="M12 6.5 A6 6 0 1 0 12 17.5"
+            stroke="white"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            fill="none"
+        />
+        {/* X — two diagonals, right half of the badge (x 14..22) */}
+        <line x1="14.5" y1="7" x2="21.5" y2="17" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="21.5" y1="7" x2="14.5" y2="17" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+);
 
 const NAV_SECTIONS = [
     {
@@ -95,10 +122,13 @@ const Sidebar = () => {
                     className={styles.logo}
                     onClick={(e) => handleNavClick(e, '/dashboard')}
                 >
+                    {/* Logo icon: CX monogram inside green-gradient rounded square */}
                     <div className={styles.logoIcon}>
-                        <Link2 size={16} />
+                        <CXLogo />
                     </div>
-                    <span className={styles.logoText}>ChainXchange</span>
+                    <div className={styles.logoWordmark}>
+                        <span className={styles.logoText}>Chain</span><span className={styles.logoTextAccent}>Xchange</span>
+                    </div>
                 </Link>
                 <button
                     ref={closeButtonRef}
