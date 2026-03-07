@@ -6,36 +6,9 @@ import {
 } from 'lucide-react';
 import { useSidebar } from '../../../context/SidebarContext';
 import api from '../../../utils/api';
+import Logo from '../../ui/Logo/Logo';
 import styles from './Sidebar.module.css';
 import clsx from 'clsx';
-
-/* ─── ChainXchange CX Monogram SVG Logo ─── */
-const CXLogo = () => (
-    <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-    >
-        {/*
-          C — open arc, left half of a circle centred at (9, 12), radius 6.
-          Starts at top (9, 6) sweeps 270° leaving a gap on the right.
-        */}
-        <path
-            d="M12 6.5 A6 6 0 1 0 12 17.5"
-            stroke="white"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            fill="none"
-        />
-        {/* X — two diagonals, right half of the badge (x 14..22) */}
-        <line x1="14.5" y1="7" x2="21.5" y2="17" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
-        <line x1="21.5" y1="7" x2="14.5" y2="17" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
-);
-
 const NAV_SECTIONS = [
     {
         label: 'Main',
@@ -117,19 +90,7 @@ const Sidebar = () => {
         >
             {/* ─── Brand Header ─── */}
             <div className={styles.header}>
-                <Link
-                    to="/dashboard"
-                    className={styles.logo}
-                    onClick={(e) => handleNavClick(e, '/dashboard')}
-                >
-                    {/* Logo icon: CX monogram inside green-gradient rounded square */}
-                    <div className={styles.logoIcon}>
-                        <CXLogo />
-                    </div>
-                    <div className={styles.logoWordmark}>
-                        <span className={styles.logoText}>Chain</span><span className={styles.logoTextAccent}>Xchange</span>
-                    </div>
-                </Link>
+                <Logo size="sm" linkToHome={false} className={styles.logo} onClick={(e) => handleNavClick(e, '/dashboard')} />
                 <button
                     ref={closeButtonRef}
                     className={styles.closeBtn}

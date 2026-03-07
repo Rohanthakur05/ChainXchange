@@ -13,7 +13,7 @@ import OfflineBanner from '../components/ui/OfflineBanner';
 import styles from './DashboardLayout.module.css';
 
 // Inner component to access keyboard shortcut context
-const DashboardLayoutInner = () => {
+const DashboardLayoutInner = ({ onLogout }) => {
     const { showShortcutHints, setShowShortcutHints } = useKeyboardShortcuts();
 
     return (
@@ -30,7 +30,7 @@ const DashboardLayoutInner = () => {
 
                 {/* Main content area */}
                 <div className={styles.main}>
-                    <Topbar />
+                    <Topbar onLogout={onLogout} />
                     <main className={styles.content}>
                         <Outlet />
                     </main>
@@ -48,12 +48,12 @@ const DashboardLayoutInner = () => {
     );
 };
 
-const DashboardLayout = () => {
+const DashboardLayout = ({ onLogout }) => {
     return (
         <ToastProvider>
             <GlobalSearchProvider>
                 <KeyboardShortcutProvider>
-                    <DashboardLayoutInner />
+                    <DashboardLayoutInner onLogout={onLogout} />
                 </KeyboardShortcutProvider>
             </GlobalSearchProvider>
         </ToastProvider>

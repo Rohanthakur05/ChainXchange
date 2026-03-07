@@ -170,7 +170,7 @@ function App() {
                                 <Route path="/terminal/:id" element={<Terminal />} />
 
                                 {/* Dashboard Routes - With Sidebar */}
-                                <Route element={<DashboardLayout />}>
+                                <Route element={<DashboardLayout onLogout={checkAuth} />}>
                                     <Route path="/dashboard" element={<Dashboard />} />
                                     <Route path="/markets" element={<Markets />} />
                                     <Route path="/markets/:id" element={<CryptoDetail />} />

@@ -9,7 +9,7 @@ import AddMoneyModal from '../../wallet/AddMoneyModal';
 import api from '../../../utils/api';
 import styles from './Topbar.module.css';
 
-const Topbar = () => {
+const Topbar = ({ onLogout }) => {
     const { openSearch } = useGlobalSearch();
     const { wallet, loading: walletLoading } = useWallet();
     const navigate = useNavigate();
@@ -102,10 +102,23 @@ const Topbar = () => {
         setNotifOpen(false);
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/login');
-        window.location.reload();
+    const handleLogout = async () => {
+        try {
+            // Tell the backend to clear the HttpOnly JWT cookie.
+            // The auth cookie is httpOnly so JavaScript cannot remove it directly —
+            // only a server response with Set-Cookie: token=; Max-Age=0 can do it.
+            await api.get('/auth/logout');
+        } catch (err) {
+            // Even if the network call fails, we still clear local state
+            // so the user isn't stuck in a broken half-logged-in state.
+            console.warn('Logout request failed, clearing local state anyway:', err.message);
+        } finally {
+            // Reset App.jsx authState so protected routes redirect to /login immediately.
+            // Without this, React still thinks the user is authenticated and
+            // navigate('/login') bounces straight back to /markets.
+            if (onLogout) onLogout();
+            navigate('/login');
+        }
     };
 
     const formattedBalance = walletLoading

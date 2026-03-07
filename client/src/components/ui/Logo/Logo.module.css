@@ -1,0 +1,90 @@
+.logoContainer {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    user-select: none;
+    transition: opacity 0.2s ease;
+}
+
+a.logoContainer:hover {
+    opacity: 0.9;
+}
+
+/* ─── Icon Wrapper ─── */
+.iconWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-radius: 25%;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+    flex-shrink: 0;
+}
+
+.svgIcon {
+    width: 60%;
+    height: 60%;
+}
+
+/* Size Variants for Icon */
+.sm {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+}
+
+.md {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+}
+
+.lg {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.3);
+}
+
+.xl {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+}
+
+/* ─── Wordmark ─── */
+.wordmark {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    display: flex;
+}
+
+.textWhite {
+    color: #ffffff;
+}
+
+.textAccent {
+    color: #22c55e;
+}
+
+/* Size Variants for Text */
+.text-sm {
+    font-size: 1.125rem;
+}
+
+.text-md {
+    font-size: 1.5rem;
+}
+
+.text-lg {
+    font-size: 1.875rem;
+}
+
+.text-xl {
+    font-size: 2.5rem;
+    letter-spacing: -0.03em;
+}
