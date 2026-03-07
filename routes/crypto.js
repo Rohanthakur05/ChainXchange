@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const CryptoController = require('../controllers/cryptoController');
+const TradeController = require('../controllers/tradeController');
 const { isAuthenticated, optionalAuth } = require('../middleware/auth');
 const { validateTrade, validateUnifiedTrade } = require('../middleware/validate');
 
@@ -12,9 +13,9 @@ router.get('/chart-data/:coinId', CryptoController.getChartData);
 router.get('/detail/:coinId', optionalAuth, CryptoController.getCryptoDetail);
 
 // ─── Authenticated trading routes ─────────────────────────────
-router.post('/buy', isAuthenticated, validateTrade, CryptoController.buyCrypto);
-router.post('/sell', isAuthenticated, validateTrade, CryptoController.sellCrypto);
-router.post('/trade', isAuthenticated, validateUnifiedTrade, CryptoController.executeTrade);
+router.post('/buy', isAuthenticated, validateTrade, TradeController.buyCrypto);
+router.post('/sell', isAuthenticated, validateTrade, TradeController.sellCrypto);
+router.post('/trade', isAuthenticated, validateUnifiedTrade, TradeController.executeTrade);
 
 // ─── Authenticated user data routes ───────────────────────────
 router.get('/portfolio', isAuthenticated, CryptoController.getPortfolio);
