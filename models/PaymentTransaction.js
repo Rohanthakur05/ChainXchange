@@ -18,8 +18,14 @@ const paymentTransactionSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['upi', 'card', 'bank', 'instant'],
+        enum: ['upi', 'card', 'bank', 'instant', 'demo'],
         required: true
+    },
+    // Snapshot of the wallet balance immediately after this transaction completed.
+    // Essential for auditing and reconstructing balance history.
+    balanceAfter: {
+        type: Number,
+        min: 0
     },
     // Card fields (optional — only for card payments)
     cardNumber: {

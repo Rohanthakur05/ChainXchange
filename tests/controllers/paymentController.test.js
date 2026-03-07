@@ -1,6 +1,5 @@
 const request = require('supertest');
 const express = require('express');
-const session = require('express-session');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const PaymentController = require('../../controllers/paymentController');
@@ -24,9 +23,16 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-app.get('/wallet', (req, res, next) => { req.cookies.user = req.cookies.user || req.query.userId; next(); }, PaymentController.showWallet);
-app.post('/wallet/add', (req, res, next) => { req.cookies.user = req.cookies.user || req.query.userId; next(); }, PaymentController.addMoney);
-app.post('/wallet/withdraw', (req, res, next) => { req.cookies.user = req.cookies.user || req.query.userId; next(); }, PaymentController.withdrawMoney);
+// Inject req.user for all routes (simulates isAuthenticated middleware)
+const injectUser = (req, res, next) => {
+  req.user = { _id: 'test-user-id' };
+  next();
+};
+
+app.get('/wallet', injectUser, PaymentController.showWallet);
+app.post('/wallet/add', injectUser, PaymentController.addMoney);
+app.post('/wallet/demo-deposit', injectUser, PaymentController.addDemoFunds);
+app.post('/wallet/withdraw', injectUser, PaymentController.withdrawMoney);
 
 describe('Payment Controller', () => {
   beforeEach(() => {
@@ -36,7 +42,7 @@ describe('Payment Controller', () => {
   });
 
   describe('showWallet', () => {
-    it('should render the wallet page with user data and transactions', async () => {
+    it('should call User.findById and PaymentTransaction.find with the correct userId', async () => {
       const user = { _id: 'test-user-id', username: 'testuser', wallet: 100 };
       const transactions = [{ type: 'deposit', amount: 100, timestamp: new Date() }];
 
@@ -45,19 +51,15 @@ describe('Payment Controller', () => {
         sort: () => ({ lean: () => Promise.resolve(transactions) })
       });
 
-      const res = await request(app)
-        .get('/wallet')
-        .set('Cookie', ['user=test-user-id']);
+      await request(app).get('/wallet');
 
-      // showWallet calls res.render which supertest doesn't handle well,
-      // so we just verify the mocks were called correctly
       expect(User.findById).toHaveBeenCalledWith('test-user-id');
       expect(PaymentTransaction.find).toHaveBeenCalledWith({ userId: 'test-user-id' });
     });
   });
 
   describe('addMoney', () => {
-    it('should add money via card payment and return updated wallet', async () => {
+    it('should add money via card and return wallet + balanceAfter', async () => {
       const updatedUser = { _id: 'test-user-id', wallet: 150 };
 
       PaymentTransaction.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
@@ -66,7 +68,6 @@ describe('Payment Controller', () => {
 
       const res = await request(app)
         .post('/wallet/add')
-        .set('Cookie', ['user=test-user-id'])
         .send({
           amount: '50',
           paymentMethod: 'card',
@@ -79,6 +80,7 @@ describe('Payment Controller', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.wallet).toBe(150);
+      expect(res.body.balanceAfter).toBe(150);
       expect(res.body.message).toContain('50');
     });
 
@@ -91,7 +93,6 @@ describe('Payment Controller', () => {
 
       const res = await request(app)
         .post('/wallet/add')
-        .set('Cookie', ['user=test-user-id'])
         .send({
           amount: '100',
           paymentMethod: 'upi',
@@ -101,6 +102,7 @@ describe('Payment Controller', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.wallet).toBe(200);
+      expect(res.body.balanceAfter).toBe(200);
     });
 
     it('should add money via bank transfer', async () => {
@@ -112,7 +114,6 @@ describe('Payment Controller', () => {
 
       const res = await request(app)
         .post('/wallet/add')
-        .set('Cookie', ['user=test-user-id'])
         .send({
           amount: '500',
           paymentMethod: 'bank',
@@ -130,7 +131,6 @@ describe('Payment Controller', () => {
     it('should reject missing amount', async () => {
       const res = await request(app)
         .post('/wallet/add')
-        .set('Cookie', ['user=test-user-id'])
         .send({ paymentMethod: 'upi', upiId: 'test@upi' });
 
       expect(res.status).toBe(400);
@@ -141,7 +141,6 @@ describe('Payment Controller', () => {
     it('should reject amount exceeding limit', async () => {
       const res = await request(app)
         .post('/wallet/add')
-        .set('Cookie', ['user=test-user-id'])
         .send({ amount: '200000', paymentMethod: 'upi', upiId: 'test@upi' });
 
       expect(res.status).toBe(400);
@@ -151,7 +150,6 @@ describe('Payment Controller', () => {
     it('should reject invalid UPI ID', async () => {
       const res = await request(app)
         .post('/wallet/add')
-        .set('Cookie', ['user=test-user-id'])
         .send({ amount: '100', paymentMethod: 'upi', upiId: 'invalid' });
 
       expect(res.status).toBe(400);
@@ -170,7 +168,6 @@ describe('Payment Controller', () => {
 
       const res = await request(app)
         .post('/wallet/add')
-        .set('Cookie', ['user=test-user-id'])
         .send({
           amount: '100',
           paymentMethod: 'upi',
@@ -184,18 +181,57 @@ describe('Payment Controller', () => {
     });
   });
 
+  describe('addDemoFunds', () => {
+    it('should credit $1,000 demo funds and return updated wallet with balanceAfter', async () => {
+      const updatedUser = { _id: 'test-user-id', wallet: 1000 };
+
+      User.findByIdAndUpdate.mockResolvedValue(updatedUser);
+      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
+
+      const res = await request(app).post('/wallet/demo-deposit');
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.wallet).toBe(1000);
+      expect(res.body.balanceAfter).toBe(1000);
+      expect(res.body.message).toContain('1,000');
+    });
+
+    it('should allow repeated demo deposits (each adds $1,000)', async () => {
+      // Second call — simulates a user clicking "Add Demo Funds" twice
+      const updatedUser = { _id: 'test-user-id', wallet: 2000 };
+
+      User.findByIdAndUpdate.mockResolvedValue(updatedUser);
+      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
+
+      const res = await request(app).post('/wallet/demo-deposit');
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.wallet).toBe(2000);
+    });
+
+    it('should return 500 if the DB update fails', async () => {
+      mockSession.withTransaction.mockRejectedValueOnce(new Error('DB error'));
+
+      const res = await request(app).post('/wallet/demo-deposit');
+
+      expect(res.status).toBe(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe('SERVER_ERROR');
+    });
+  });
+
   describe('withdrawMoney', () => {
-    it('should withdraw money from the user wallet', async () => {
-      const user = { _id: 'test-user-id', wallet: 100 };
+    it('should withdraw money and return newBalance + balanceAfter', async () => {
       const updatedUser = { _id: 'test-user-id', wallet: 50 };
 
-      User.findById.mockResolvedValue(user);
-      User.findByIdAndUpdate.mockResolvedValue(updatedUser);
+      // Atomic guard: findOneAndUpdate returns the updated user
+      User.findOneAndUpdate.mockResolvedValue(updatedUser);
       PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
 
       const res = await request(app)
         .post('/wallet/withdraw')
-        .set('Cookie', ['user=test-user-id'])
         .send({
           amount: '50',
           cardNumber: '1234567812345678',
@@ -207,17 +243,23 @@ describe('Payment Controller', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.newBalance).toBe(50);
+      expect(res.body.balanceAfter).toBe(50);
     });
 
-    it('should return an error for insufficient funds', async () => {
-      const user = { _id: 'test-user-id', wallet: 40 };
-      User.findById.mockResolvedValue(user);
+    it('should return 400 for insufficient funds', async () => {
+      // Atomic guard: findOneAndUpdate returns null → balance check failed
+      User.findOneAndUpdate.mockResolvedValueOnce(null);
+      // User.exists confirms the user exists (so it's an insufficient-funds case, not missing user)
+      User.exists.mockReturnValueOnce({ session: () => Promise.resolve({ _id: 'test-user-id' }) });
+
+      mockSession.withTransaction.mockImplementationOnce(async (fn) => {
+        try { await fn(); } catch (e) { throw e; }
+      });
 
       const res = await request(app)
         .post('/wallet/withdraw')
-        .set('Cookie', ['user=test-user-id'])
         .send({
-          amount: '50',
+          amount: '999999',
           cardNumber: '1234567812345678',
           cardHolder: 'Test User',
           expiryDate: '12/25',
@@ -232,7 +274,6 @@ describe('Payment Controller', () => {
     it('should require all fields for withdrawal', async () => {
       const res = await request(app)
         .post('/wallet/withdraw')
-        .set('Cookie', ['user=test-user-id'])
         .send({ amount: '50' });
 
       expect(res.status).toBe(400);

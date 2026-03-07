@@ -47,8 +47,8 @@ class AuthController {
             const newUser = await User.create({
                 username: username.trim(),
                 email: email.toLowerCase().trim(),
-                password: hashedPassword,
-                wallet: 1000 // Starting demo balance
+                password: hashedPassword
+                // wallet starts at $0 — users add funds via /payment/add-money or /payment/demo-deposit
             });
 
             // Issue JWT

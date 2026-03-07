@@ -168,19 +168,13 @@ class CryptoController {
             const priceNum = parseFloat(price);
             const totalCost = quantityNum * priceNum;
 
-            // Fetch coin metadata (cached, outside transaction)
-            const [user, coinInfo] = await Promise.all([
-                User.findById(userId).lean(),
-                fetchCoinGeckoDataWithCache(
-                    `https://api.coingecko.com/api/v3/coins/${coinId}`,
-                    null,
-                    `coin-info-${coinId}`,
-                    60 * 60 * 1000
-                )
-            ]);
-
-            if (!user) return res.status(404).json({ error: 'User not found' });
-            if (user.wallet < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
+            // Fetch coin metadata (cached, outside transaction — read-only, safe to do here)
+            const coinInfo = await fetchCoinGeckoDataWithCache(
+                `https://api.coingecko.com/api/v3/coins/${coinId}`,
+                null,
+                `coin-info-${coinId}`,
+                60 * 60 * 1000
+            );
 
             const coinData = {
                 name: coinInfo?.name || coinId.charAt(0).toUpperCase() + coinId.slice(1),
@@ -188,7 +182,7 @@ class CryptoController {
                 image: coinInfo?.image?.large || coinInfo?.image?.small || '/images/default-coin.svg'
             };
 
-            // Calculate new average price before transaction
+            // Calculate new average price before transaction (read-only, outside session is fine)
             const existingPortfolio = await Portfolio.findOne({ userId, coinId }).lean();
             let newAverageBuyPrice;
             if (existingPortfolio) {
@@ -199,8 +193,28 @@ class CryptoController {
             }
 
             // ── ATOMIC TRANSACTION ─────────────────────────────────
+            // The balance guard is inside the session so two concurrent buy
+            // requests cannot both pass the check before either deducts funds.
             session.startTransaction();
-            await User.findByIdAndUpdate(userId, { $inc: { wallet: -totalCost } }, { session });
+
+            // Atomic debit: only executes if wallet >= totalCost
+            const updatedUser = await User.findOneAndUpdate(
+                { _id: userId, wallet: { $gte: totalCost } },
+                { $inc: { wallet: -totalCost } },
+                { new: true, session }
+            );
+
+            if (!updatedUser) {
+                // Either user not found or insufficient funds
+                const exists = await User.exists({ _id: userId }).session(session);
+                if (!exists) {
+                    await session.abortTransaction();
+                    return res.status(404).json({ error: 'User not found' });
+                }
+                await session.abortTransaction();
+                return res.status(400).json({ error: 'Insufficient funds' });
+            }
+
             await Portfolio.findOneAndUpdate(
                 { userId, coinId },
                 {

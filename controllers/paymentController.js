@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const User = require('../models/User');
 const PaymentTransaction = require('../models/PaymentTransaction');
 
@@ -75,13 +75,16 @@ class PaymentController {
     }
 
     /**
-     * Process add money - supports UPI, Card, Bank Transfer
+     * POST /payment/add-money
+     *
+     * Process a real (simulated) deposit â€” supports UPI, Card, Bank Transfer, Instant.
      *
      * Production safeguards:
      *  1. Idempotency key prevents duplicate deposits on double-click / retry
      *  2. MongoDB session ensures atomicity between PaymentTransaction creation and wallet update
-     *  3. Detailed error classification (validation vs. server) for helpful UI messages
-     *  4. Structured logging for every payment attempt
+     *  3. balanceAfter is stored in the transaction record for full audit history
+     *  4. Detailed error classification (validation vs. server) for helpful UI messages
+     *  5. Structured logging for every payment attempt
      */
     static async addMoney(req, res) {
         const userId = req.user._id;
@@ -104,7 +107,7 @@ class PaymentController {
             idempotencyKey
         });
 
-        // ── 1. Input validation ──────────────────────────────────────────
+        // â”€â”€ 1. Input validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         if (!amount) {
             return res.status(400).json({
@@ -131,7 +134,7 @@ class PaymentController {
             });
         }
 
-        // ── 2. Payment method validation ─────────────────────────────────
+        // â”€â”€ 2. Payment method validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         const method = paymentMethod || 'instant';
         let paymentDetails = {};
@@ -190,7 +193,7 @@ class PaymentController {
                 });
         }
 
-        // ── 3. Idempotency check ─────────────────────────────────────────
+        // â”€â”€ 3. Idempotency check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // If the client sent an idempotency key and we already processed it,
         // return the original result instead of creating a duplicate.
 
@@ -223,8 +226,10 @@ class PaymentController {
             }
         }
 
-        // ── 4. Atomic transaction: save record + update wallet ───────────
+        // â”€â”€ 4. Atomic transaction: save record + update wallet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Uses a MongoDB session so both operations succeed or both roll back.
+        // balanceAfter is captured from the updated user document and patched
+        // onto the PaymentTransaction record in the same session.
 
         const session = await mongoose.startSession();
 
@@ -233,7 +238,7 @@ class PaymentController {
             let paymentTx;
 
             await session.withTransaction(async () => {
-                // Create payment transaction record
+                // Create payment transaction record (balanceAfter set after wallet update)
                 paymentTx = new PaymentTransaction({
                     userId,
                     type: 'deposit',
@@ -256,6 +261,10 @@ class PaymentController {
                 if (!updatedUser) {
                     throw new Error('User not found during wallet update');
                 }
+
+                // Patch balanceAfter onto the transaction record
+                paymentTx.balanceAfter = updatedUser.wallet;
+                await paymentTx.save({ session });
             });
 
             logPayment('info', 'Payment completed successfully', {
@@ -270,10 +279,11 @@ class PaymentController {
                 success: true,
                 message: `Successfully added $${amountNum.toLocaleString()} to wallet`,
                 wallet: updatedUser.wallet,
+                balanceAfter: updatedUser.wallet,
                 transactionId: paymentTx._id
             });
         } catch (error) {
-            // ── 5. Error classification ──────────────────────────────────
+            // â”€â”€ 5. Error classification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
             logPayment('error', 'Payment failed', {
                 userId,
@@ -285,7 +295,7 @@ class PaymentController {
                 stack: error.stack
             });
 
-            // Mongoose validation error → 400 with specific field info
+            // Mongoose validation error â†’ 400 with specific field info
             if (error.name === 'ValidationError') {
                 const fields = Object.keys(error.errors || {});
                 return res.status(400).json({
@@ -318,7 +328,93 @@ class PaymentController {
     }
 
     /**
-     * Process withdrawal
+     * POST /payment/demo-deposit
+     *
+     * Instantly credits the authenticated user with $1,000 in demo funds.
+     * Clearly flagged as paymentMethod: 'demo' in the transaction log.
+     *
+     * This is a sandbox-only feature â€” in a real exchange this route would
+     * not exist. Real exchanges require fiat on-ramps (bank transfer, card
+     * gateway) that go through KYC and payment processors (Stripe, Razorpay,
+     * etc.) before crediting the account.
+     */
+    static async addDemoFunds(req, res) {
+        const userId = req.user._id;
+        const DEMO_AMOUNT = 1000;
+
+        logPayment('info', 'Demo deposit requested', { userId });
+
+        const session = await mongoose.startSession();
+
+        try {
+            let updatedUser;
+            let paymentTx;
+
+            await session.withTransaction(async () => {
+                // Atomically credit the wallet
+                updatedUser = await User.findByIdAndUpdate(
+                    userId,
+                    { $inc: { wallet: DEMO_AMOUNT } },
+                    { new: true, session }
+                );
+
+                if (!updatedUser) {
+                    throw new Error('User not found during demo deposit');
+                }
+
+                // Record the demo deposit in the transaction log
+                paymentTx = new PaymentTransaction({
+                    userId,
+                    type: 'deposit',
+                    amount: DEMO_AMOUNT,
+                    paymentMethod: 'demo',
+                    balanceAfter: updatedUser.wallet,
+                    status: 'completed'
+                });
+
+                await paymentTx.save({ session });
+            });
+
+            logPayment('info', 'Demo deposit completed', {
+                userId,
+                amount: DEMO_AMOUNT,
+                newBalance: updatedUser.wallet,
+                transactionId: paymentTx._id
+            });
+
+            res.json({
+                success: true,
+                message: `$${DEMO_AMOUNT.toLocaleString()} demo funds added to your wallet`,
+                wallet: updatedUser.wallet,
+                balanceAfter: updatedUser.wallet,
+                transactionId: paymentTx._id
+            });
+        } catch (error) {
+            logPayment('error', 'Demo deposit failed', {
+                userId,
+                error: error.message,
+                stack: error.stack
+            });
+            res.status(500).json({
+                success: false,
+                error: 'Demo deposit failed. Please try again.',
+                code: 'SERVER_ERROR',
+                ...(process.env.NODE_ENV === 'development' && { debug: error.message })
+            });
+        } finally {
+            session.endSession();
+        }
+    }
+
+    /**
+     * POST /payment/withdraw
+     *
+     * Atomically withdraws funds from the wallet.
+     *
+     * Race-condition safe: the balance guard lives inside the MongoDB
+     * findOneAndUpdate filter â€” not in a pre-flight check â€” so two
+     * concurrent withdrawals cannot both pass the guard and drive the
+     * balance negative.
      */
     static async withdrawMoney(req, res) {
         const userId = req.user._id;
@@ -342,32 +438,36 @@ class PaymentController {
                 });
             }
 
-            const user = await User.findById(userId);
-
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'User not found'
-                });
-            }
-
-            // Check if user has sufficient balance
-            if (!user.wallet || user.wallet < amountNum) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Insufficient balance. Available: $${user.wallet || 0}`
-                });
-            }
-
             const maskedCardNumber = '**** **** **** ' + cardNumber.slice(-4);
 
-            // Use atomic session for withdrawal too
+            // Use atomic session for withdrawal
             const session = await mongoose.startSession();
 
             try {
                 let updatedUser;
 
                 await session.withTransaction(async () => {
+                    // â”€â”€ Atomic balance guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    // The filter `{ _id: userId, wallet: { $gte: amountNum } }`
+                    // means the update only executes if the current balance is
+                    // sufficient. If two concurrent withdrawals race here, at
+                    // most one will match the filter â€” the other gets null back.
+                    updatedUser = await User.findOneAndUpdate(
+                        { _id: userId, wallet: { $gte: amountNum } },
+                        { $inc: { wallet: -amountNum } },
+                        { new: true, session }
+                    );
+
+                    if (!updatedUser) {
+                        // Either user doesn't exist or balance was insufficient.
+                        // Check which case this is to give the right error message.
+                        const exists = await User.exists({ _id: userId }).session(session);
+                        if (!exists) {
+                            throw Object.assign(new Error('User not found'), { code: 'USER_NOT_FOUND' });
+                        }
+                        throw Object.assign(new Error('Insufficient balance'), { code: 'INSUFFICIENT_FUNDS' });
+                    }
+
                     const paymentTx = new PaymentTransaction({
                         userId,
                         type: 'withdrawal',
@@ -375,16 +475,11 @@ class PaymentController {
                         paymentMethod: 'card',
                         cardNumber: maskedCardNumber,
                         cardHolder,
+                        balanceAfter: updatedUser.wallet,
                         status: 'completed'
                     });
 
                     await paymentTx.save({ session });
-
-                    updatedUser = await User.findByIdAndUpdate(
-                        userId,
-                        { $inc: { wallet: -amountNum } },
-                        { new: true, session }
-                    );
                 });
 
                 logPayment('info', 'Withdrawal completed', {
@@ -396,9 +491,23 @@ class PaymentController {
                 res.json({
                     success: true,
                     message: 'Withdrawal successful',
-                    newBalance: updatedUser.wallet
+                    newBalance: updatedUser.wallet,
+                    balanceAfter: updatedUser.wallet
                 });
             } catch (txError) {
+                // Surface domain errors as 400, infra errors as 500
+                if (txError.code === 'INSUFFICIENT_FUNDS') {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Insufficient balance. Please add funds before withdrawing.`
+                    });
+                }
+                if (txError.code === 'USER_NOT_FOUND') {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'User not found'
+                    });
+                }
                 logPayment('error', 'Withdrawal transaction failed', {
                     userId,
                     amount: amountNum,
@@ -423,4 +532,3 @@ class PaymentController {
 }
 
 module.exports = PaymentController;
-

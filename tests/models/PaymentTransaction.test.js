@@ -76,6 +76,55 @@ describe('PaymentTransaction Model', () => {
     expect(foundTx.bankIfsc).toBe('HDFC0001234');
   });
 
+  // ── New tests for wallet system changes ──────────────────────────────────
+
+  it('should accept demo as a paymentMethod (sandbox deposit)', async () => {
+    const paymentTx = new PaymentTransaction({
+      userId: user._id,
+      type: 'deposit',
+      amount: 1000,
+      paymentMethod: 'demo',
+      balanceAfter: 1000,
+      status: 'completed'
+    });
+    await paymentTx.save();
+
+    const foundTx = await PaymentTransaction.findOne({ userId: user._id, paymentMethod: 'demo' });
+    expect(foundTx).toBeDefined();
+    expect(foundTx.paymentMethod).toBe('demo');
+    expect(foundTx.balanceAfter).toBe(1000);
+  });
+
+  it('should store balanceAfter as a non-negative number', async () => {
+    const paymentTx = new PaymentTransaction({
+      userId: user._id,
+      type: 'deposit',
+      amount: 250,
+      paymentMethod: 'instant',
+      balanceAfter: 1250,
+      status: 'completed'
+    });
+    await paymentTx.save();
+
+    const foundTx = await PaymentTransaction.findOne({ userId: user._id, paymentMethod: 'instant' });
+    expect(foundTx).toBeDefined();
+    expect(foundTx.balanceAfter).toBe(1250);
+    expect(foundTx.balanceAfter).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should allow balanceAfter to be omitted (optional field)', async () => {
+    const paymentTx = new PaymentTransaction({
+      userId: user._id,
+      type: 'deposit',
+      amount: 50,
+      paymentMethod: 'upi',
+      upiId: 'optional@upi',
+      // balanceAfter intentionally omitted
+      status: 'completed'
+    });
+    await expect(paymentTx.save()).resolves.toBeDefined();
+  });
+
   it('should require paymentMethod field', async () => {
     const paymentTx = new PaymentTransaction({
       userId: user._id,
