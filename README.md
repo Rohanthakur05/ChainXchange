@@ -1,11 +1,11 @@
-﻿# ChainXchange - Professional Crypto Trading Platform
+﻿# ChainXchange — Professional Crypto Trading Platform
 
 [![GitHub stars](https://img.shields.io/github/stars/Rohanthakur05/ChainXchange?style=social)](https://github.com/Rohanthakur05/ChainXchange/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/Rohanthakur05/ChainXchange?style=social)](https://github.com/Rohanthakur05/ChainXchange/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/Rohanthakur05/ChainXchange)](https://github.com/Rohanthakur05/ChainXchange/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A production-grade cryptocurrency trading and portfolio management platform built with the MERN stack. Designed to replicate the experience of professional exchanges like Binance, Groww, and Zerodha.
+A production-grade cryptocurrency trading and portfolio management platform built with the MERN stack. Designed to replicate the experience of professional exchanges like Binance, Groww, and CoinDCX — with real-time prices, JWT-secured auth, atomic trade execution, and a Redis-backed caching layer.
 
 ---
 
@@ -14,28 +14,40 @@ A production-grade cryptocurrency trading and portfolio management platform buil
 ### 📈 Pro Trading Terminal (`/terminal/:coinId`)
 - **Full-Screen Focus:** Distraction-free trading interface removing sidebars and widgets
 - **Advanced Charting:** Integrated TradingView Lightweight Charts for professional analysis
-- **Indicator System:** 
-  - Complete suite of technical indicators (RSI, MACD, Bollinger Bands, etc.)
-  - **State Persistence:** Indicators saved per-coin in local storage
-  - **Unified Control:** Single panel to manage indicators across both Graph and TradingView modes
-- **Order Management:** Fast buy/sell execution directly from the terminal
+- **Indicator System:** Complete suite of technical indicators (RSI, MACD, Bollinger Bands, EMA)
+  - State persisted per-coin in localStorage
+  - Single unified control panel for all chart modes
+- **Order Management:** Fast buy/sell execution directly from the terminal with confirmation modals and full fee breakdown
 
 ### 💼 Portfolio Analytics (`/portfolio`)
+- **Full Portfolio Overview:** Holdings, total value, per-asset P&L, and average buy price
 - **Historical Performance:** Interactive Area Chart showing portfolio value over the last 30 days
-- **Dynamic Calculation:** Backend aggregates daily values based on current holdings and historical price data
-- **Asset Allocation:** Visual pie chart distribution of your crypto assets
-- **Real-time P&L:** Instant profit/loss tracking for total portfolio and individual assets
+- **Asset Allocation:** Pie chart distribution of your crypto assets
+- **Real-time P&L:** Instant profit/loss tracking calculated against live CoinGecko prices
+- **Redis-Cached:** Portfolio data cached at two tiers (personal + global market cache) for sub-200ms responses
 
 ### ⭐ Watchlist Manager
-- **Integrated Tracking:** "Star" any coin to add it to your watchlist instantly
-- **Dashboard Widget:** Dedicated widget showing real-time prices of favorite assets
-- **Smart Filtering:** Filter the Markets table to show only your watched coins
-- **Persistence:** Watchlist stored securely in User database profile
+- **Instant Add/Remove:** Star any coin to add it to your watchlist
+- **Dashboard Widget:** Real-time prices of your favorite assets
+- **Smart Filtering:** Filter the Markets table to show only watched coins
+- **Persistent:** Watchlist stored securely per-user in MongoDB
 
-### 🔔 Smart Alerts & Notifications
-- **Price Triggers:** Set alerts for "Price Above", "Price Below", "% Increase", or "% Decrease"
-- **Real-time Notifications:** Topbar bell icon shows notifications when alerts are triggered
-- **Management:** View, pause, and delete active alerts from the Profile section
+### 🔔 Price Alerts & Notifications
+- **Flexible Triggers:** "Price Above", "Price Below", "% Increase", or "% Decrease"
+- **Real-time Bell:** Topbar notification icon shows triggered alerts instantly
+- **Alert Management:** View, pause, and delete active alerts from the Profile section
+
+### 🔌 Real-time WebSocket Prices
+- **Socket.IO Broadcaster:** Server pushes live market prices to all connected clients every 15 seconds
+- **Per-Coin Rooms:** Subscribe to specific coin rooms for targeted price updates
+- **Non-blocking Loop:** Broadcast loop is async-safe and won't hang on CoinGecko rate limits
+
+### 🛡️ Security
+- **JWT Authentication:** Stateless, cookie-based JWT tokens with automatic expiry and invalidation
+- **Rate Limiting:** Auth routes protected against brute-force attacks
+- **Account Lockout:** Failed login attempt tracking with timed lockout
+- **Atomic Trades:** Buy/sell operations use MongoDB replica set transactions to prevent race conditions and negative balances
+- **Input Validation:** Express middleware validates all trade inputs before processing
 
 ### ⌨️ Keyboard Shortcuts (Power Users)
 | Key | Action |
@@ -47,17 +59,6 @@ A production-grade cryptocurrency trading and portfolio management platform buil
 | `W` | Toggle watchlist (on coin page) |
 | `ESC` | Close any modal/overlay |
 
-### 🛡️ Safety & Trust
-- **Confirmation Modals:** All trades require explicit confirmation with full fee breakdown
-- **Clear Error Messages:** Human-readable errors with actionable suggestions (no cryptic codes)
-- **Toast Notifications:** Visual feedback for all user actions
-- **Input Validation:** Real-time validation prevents invalid trades before submission
-
-### ✨ Production Polish
-- **Global Search:** Press `/` anywhere to open a fast, keyboard-navigable search modal
-- **Optimized Performance:** Redis caching for API responses (CoinGecko) to prevent rate limits
-- **Responsive Design:** Fully adaptive UI for desktop, tablet, and mobile views
-
 ---
 
 ## ⚙️ Tech Stack
@@ -65,28 +66,57 @@ A production-grade cryptocurrency trading and portfolio management platform buil
 ### Frontend
 | Technology | Purpose |
 |------------|---------|
-| **React.js** | Component-based UI architecture |
-| **Recharts** | Portfolio and Performance visualizations |
+| **React 18 + Vite** | Fast SPA with hot module replacement |
+| **Axios** | HTTP client with centralized error classification |
+| **Recharts** | Portfolio performance and allocation charts |
 | **TradingView Lightweight Charts** | Candlestick and technical analysis |
+| **Socket.IO Client** | Real-time WebSocket price updates |
 | **Lucide React** | Modern, consistent icon system |
-| **CSS Modules** | Scoped styling for clean, maintainable CSS |
+| **CSS Modules** | Scoped styling for maintainable, collision-free CSS |
 
 ### Backend
 | Technology | Purpose |
 |------------|---------|
-| **Node.js & Express** | RESTful API server |
-| **MongoDB** | Database for Users, Transactions, Portfolios, and Alerts |
-| **Redis** | Caching layer for high-performance market data retrieval |
-| **JWT** | Secure authentication and session management |
+| **Node.js + Express** | RESTful API server |
+| **MongoDB + Mongoose** | Database for Users, Transactions, Portfolios, and Alerts |
+| **Redis** | Two-tier caching for CoinGecko API responses |
+| **Socket.IO** | Real-time WebSocket price broadcasting |
+| **JWT + cookie-parser** | Secure, stateless authentication |
+| **Helmet + Compression** | Security headers and response compression |
+| **connect-mongo** | MongoDB-backed session storage |
+
+---
+
+## 📡 API Reference
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/auth/register` | ❌ | Register a new user |
+| `POST` | `/auth/login` | ❌ | Login, receive JWT cookie |
+| `POST` | `/auth/logout` | ✅ | Logout and clear cookie |
+| `GET` | `/crypto` | ❌ | Top 100 coins from CoinGecko |
+| `GET` | `/crypto/detail/:coinId` | Optional | Full coin data + user holding |
+| `GET` | `/crypto/portfolio` | ✅ | Full portfolio with live P&L |
+| `GET` | `/crypto/portfolio/history` | ✅ | 30-day portfolio value history |
+| `GET` | `/crypto/transactions` | ✅ | Transaction history with filters |
+| `POST` | `/crypto/buy` | ✅ | Buy order (atomic) |
+| `POST` | `/crypto/sell` | ✅ | Sell order (atomic) |
+| `GET` | `/api/portfolio` | ✅ | Portfolio summary (full detail) |
+| `GET` | `/api/portfolio/summary` | ✅ | Lightweight holdings summary |
+| `GET` | `/api/home` | ❌ | Home page market snapshot |
+| `GET/POST` | `/alerts` | ✅ | Manage price alerts |
+| `GET/POST` | `/watchlist` | ✅ | Manage watchlist |
+| `POST` | `/payment/deposit` | ✅ | Add funds to wallet |
+| `GET` | `/health` | ❌ | Server + DB health check |
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v14+)
-- MongoDB (Local or Atlas URL)
-- Redis Server (Running locally or cloud)
+- **Node.js** v18+
+- **MongoDB** — local (with replica set for transactions) or Atlas
+- **Redis** — local or cloud instance
 
 ### Installation
 
@@ -96,37 +126,44 @@ A production-grade cryptocurrency trading and portfolio management platform buil
    cd ChainXchange
    ```
 
-2. **Install Dependencies**
+2. **Install dependencies**
    ```bash
-   # Install backend dependencies
+   # Backend
    npm install
 
-   # Install frontend dependencies
-   cd client
-   npm install
-   cd ..
+   # Frontend
+   cd client && npm install && cd ..
    ```
 
-3. **Environment Setup**
-   
-   Create a `.env` file in the root directory:
+3. **Environment setup**
+
+   Create a `.env` file in the project root:
    ```env
-   PORT=5000
-   MONGO_URI=your_mongodb_connection_string
-   JWT_SECRET=your_jwt_secret_key
+   PORT=8000
+   MONGO_URI=mongodb://127.0.0.1:27017/crypto-trading?replicaSet=rs0
+   JWT_SECRET=your_strong_jwt_secret
+   COOKIE_SECRET=your_cookie_secret
+   SESSION_SECRET=your_session_secret
    REDIS_HOST=127.0.0.1
    REDIS_PORT=6379
+   NODE_ENV=development
+   CLIENT_URL=http://localhost:5173
    ```
 
-4. **Run the Application**
+   > **Note:** MongoDB must be running as a replica set to support atomic trade transactions. For local development, start MongoDB with `mongod --replSet rs0` and run `rs.initiate()` once in `mongosh`.
+
+4. **Run the application**
    ```bash
-   # Run both backend and frontend concurrently
-   npm run dev
+   # Terminal 1 — Backend (with auto-reload)
+   nodemon app.js
+
+   # Terminal 2 — Frontend dev server
+   cd client && npm run dev
    ```
 
-5. **Access the Platform**
-   
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
+5. **Open in browser**
+
+   [http://localhost:5173](http://localhost:5173)
 
 ---
 
@@ -134,28 +171,53 @@ A production-grade cryptocurrency trading and portfolio management platform buil
 
 ```
 ChainXchange/
-├── client/                 # React frontend
+├── app.js                    # Express server entry point
+├── config/
+│   └── database.js           # MongoDB connection with retry logic
+├── controllers/
+│   ├── authController.js     # Register, login, logout
+│   ├── cryptoController.js   # Markets, portfolio, chart data
+│   ├── tradeController.js    # Atomic buy/sell with transactions
+│   ├── paymentController.js  # Wallet deposit/withdrawal
+│   ├── watchlistController.js
+│   └── homeController.js
+├── middleware/
+│   ├── auth.js               # JWT verification (isAuthenticated, optionalAuth)
+│   └── validate.js           # Trade input validation
+├── models/
+│   ├── User.js               # User schema (wallet, watchlist, security)
+│   ├── Portfolio.js          # Per-coin holdings (quantity, avg buy price)
+│   ├── Transaction.js        # Trade history (buy/sell, idempotency key)
+│   ├── Alert.js              # Price alert definitions
+│   └── PaymentTransaction.js # Deposit/withdrawal records
+├── routes/
+│   ├── auth.js
+│   ├── crypto.js             # Trading + portfolio routes
+│   ├── portfolio.js          # /api/portfolio standalone router
+│   ├── alerts.js
+│   ├── payment.js
+│   └── watchlist.js
+├── utils/
+│   ├── geckoApi.js           # CoinGecko fetch with Redis cache
+│   ├── redisClient.js        # Shared Redis client
+│   └── tradeGuard.js         # Idempotency + slippage checks
+├── client/                   # React + Vite frontend
 │   └── src/
-│       ├── components/     # Reusable UI components
-│       ├── pages/          # Page components
-│       ├── context/        # React Context providers
-│       └── utils/          # Utility functions (errors, api)
-├── models/                 # MongoDB schemas
-├── routes/                 # Express API routes
-├── middleware/             # Auth & validation middleware
-├── controllers/            # Route controllers
-└── server.js               # Entry point
+│       ├── components/       # Reusable UI (Button, Badge, Chart, etc.)
+│       ├── pages/            # Portfolio, Markets, Terminal, Auth, etc.
+│       ├── context/          # AuthContext, ThemeContext
+│       ├── services/         # portfolioService.js, priceService.js
+│       └── utils/            # api.js (Axios), errors.js
+└── tests/                    # Jest unit tests
 ```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how you can help:
-
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+3. Commit your changes (`git commit -m 'feat: add AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
@@ -163,18 +225,16 @@ Contributions are welcome! Here's how you can help:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 👨‍💻 Author
 
-**Rohan Thakur** - Lead Developer
+**Rohan Thakur** — Lead Developer
 
 - GitHub: [@Rohanthakur05](https://github.com/Rohanthakur05)
 
 ---
 
-<p align="center">
-  Made with ❤️ for the crypto community
-</p>
+<p align="center">Made with ❤️ for the crypto community</p>
