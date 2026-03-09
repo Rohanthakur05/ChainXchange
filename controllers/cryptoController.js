@@ -156,81 +156,128 @@ class CryptoController {
     }
 
     /**
-     * Get user portfolio
+     * Internal helper: load full portfolio data for a user.
+     * Returns { user, portfolioData } where portfolioData has:
+     * { holdings, portfolioValue, totalProfitLoss, totalProfitLossPercentage }
      */
-    static async getPortfolio(req, res) {
+    static async _fetchPortfolioDataForUser(userId) {
+        // --- TIER 1: PERSONAL PORTFOLIO CACHE CHECK ---
+        const cacheKey = `portfolio:${userId}`;
+
         try {
-            const userId = req.user._id;  // From JWT middleware
+            const cachedDataString = await redisClient.get(cacheKey);
+            if (cachedDataString) {
+                const cachedData = JSON.parse(cachedDataString);
+                const user = await User.findById(userId).lean();
 
-            // --- PORTFOLIO CACHE CHECK ---
-            const cacheKey = `portfolio:${userId}`;
-
-            try {
-                const cachedDataString = await redisClient.get(cacheKey);
-                if (cachedDataString) {
-                    const cachedData = JSON.parse(cachedDataString);
-                    const user = await User.findById(userId).lean();
-
-                    return res.json({
-                        user: user,
+                return {
+                    user,
+                    portfolioData: {
                         holdings: cachedData.holdings,
                         portfolioValue: cachedData.portfolioValue,
                         totalProfitLoss: cachedData.totalProfitLoss,
                         totalProfitLossPercentage: cachedData.totalProfitLossPercentage
-                    });
-                }
-            } catch (cacheError) {
-                console.error(`Redis GET error for key ${cacheKey}:`, cacheError.message);
+                    }
+                };
             }
-            // --- END CACHE CHECK ---
+        } catch (cacheError) {
+            console.error(`Redis GET error for key ${cacheKey}:`, cacheError.message);
+        }
+        // --- END TIER 1 ---
 
-            const user = await User.findById(userId);
-            const portfolio = await Portfolio.find({ userId });
+        // Fetch user and portfolio concurrently using lean() for speed
+        const [user, portfolio] = await Promise.all([
+            User.findById(userId).lean(),
+            Portfolio.find({ userId }).lean()
+        ]);
 
-            if (!user) {
-                return res.status(401).json({ error: 'User not authenticated' });
-            }
+        if (!user) {
+            const err = new Error('User not authenticated');
+            err.status = 401;
+            throw err;
+        }
 
-            let portfolioData = {
-                holdings: [],
-                portfolioValue: 0,
-                totalProfitLoss: 0,
-                totalProfitLossPercentage: 0
-            };
+        let portfolioData = {
+            holdings: [],
+            portfolioValue: 0,
+            totalProfitLoss: 0,
+            totalProfitLossPercentage: 0
+        };
 
-            if (portfolio.length > 0) {
+        if (portfolio.length > 0) {
+            try {
+                // Sort coinIds to ensure stable cache keys
+                const sortedPortfolio = [...portfolio].sort((a, b) => a.coinId.localeCompare(b.coinId));
+                const coinIds = sortedPortfolio.map(p => p.coinId).join(',');
+
+                // --- TIER 2: GLOBAL MARKETS CACHE CHECK ---
+                // Check if all coins are in the global markets cache (updated every 5 mins by getMarkets)
+                let marketData = null;
                 try {
-                    // Sort coinIds to ensure stable cache keys
-                    const sortedPortfolio = [...portfolio].sort((a, b) => a.coinId.localeCompare(b.coinId));
-                    const coinIds = sortedPortfolio.map(p => p.coinId).join(',');
+                    const globalMarketsStr = await redisClient.get('crypto-markets');
+                    if (globalMarketsStr) {
+                        const globalMarkets = JSON.parse(globalMarketsStr);
+                        const globalCoinsSet = new Set(globalMarkets.map(c => c.id));
+                        const allFound = sortedPortfolio.every(p => globalCoinsSet.has(p.coinId));
 
+                        if (allFound) {
+                            // Filter the global markets data to only include portfolio coins
+                            marketData = globalMarkets.filter(c => coinIds.includes(c.id));
+                        }
+                    }
+                } catch (err) {
+                    console.error('Redis GET global markets error:', err.message);
+                }
+
+                // --- TIER 3: COINGECKO FETCH WITH TIMEOUT ---
+                if (!marketData) {
                     // Single API call for all data (prices + metadata)
-                    const marketData = await fetchCoinGeckoDataWithCache(
+                    const fetchPromise = fetchCoinGeckoDataWithCache(
                         `https://api.coingecko.com/api/v3/coins/markets?ids=${coinIds}&vs_currency=usd&order=market_cap_desc&per_page=250&page=1`,
                         null,
                         `portfolio-coins-${coinIds}`,
                         10 * 60 * 1000 // 10 minutes cache
                     );
 
-                    portfolioData = CryptoController._calculatePortfolioMetrics(portfolio, marketData);
+                    // 2.5 second timeout to prevent backend from hanging on CoinGecko rate limits
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('CoinGecko Portfolio timeout hit')), 2500)
+                    );
 
-                } catch (err) {
-                    console.error('Portfolio CoinGecko error:', err);
-                    // Fallback logic
-                    portfolioData = CryptoController._calculatePortfolioMetrics(portfolio, []);
+                    marketData = await Promise.race([fetchPromise, timeoutPromise]);
                 }
-            }
 
-            // --- STORE DATA IN CACHE ---
-            try {
-                await redisClient.setEx(cacheKey, PORTFOLIO_CACHE_TTL, JSON.stringify(portfolioData));
-            } catch (cacheError) {
-                console.error(`Redis SETEX error for key ${cacheKey}:`, cacheError.message);
+                portfolioData = CryptoController._calculatePortfolioMetrics(portfolio, marketData);
+
+            } catch (err) {
+                console.error('Portfolio pricing error (falling back to avg buy price):', err.message);
+                // Fallback logic: gracefully calculate metrics using averageBuyPrice
+                portfolioData = CryptoController._calculatePortfolioMetrics(portfolio, []);
             }
-            // --- END STORE DATA ---
+        }
+
+        // --- STORE DATA IN CACHE ---
+        try {
+            // Background cache set to not block the response
+            redisClient.setEx(cacheKey, PORTFOLIO_CACHE_TTL, JSON.stringify(portfolioData)).catch(
+                err => console.error(`Background Redis SETEX error for ${cacheKey}:`, err.message)
+            );
+        } catch (cacheError) { }
+        // --- END STORE DATA ---
+
+        return { user, portfolioData };
+    }
+
+    /**
+     * Get user portfolio (full detail)
+     */
+    static async getPortfolio(req, res) {
+        try {
+            const userId = req.user._id;  // From JWT middleware
+            const { user, portfolioData } = await CryptoController._fetchPortfolioDataForUser(userId);
 
             res.json({
-                user: user,
+                user,
                 holdings: portfolioData.holdings,
                 portfolioValue: portfolioData.portfolioValue,
                 totalProfitLoss: portfolioData.totalProfitLoss,
@@ -238,7 +285,38 @@ class CryptoController {
             });
         } catch (error) {
             console.error('Portfolio error:', error);
-            res.status(500).json({ error: 'Error loading portfolio' });
+            const status = error.status || 500;
+            res.status(status).json({ error: status === 401 ? 'User not authenticated' : 'Error loading portfolio' });
+        }
+    }
+
+    /**
+     * Lightweight portfolio summary endpoint used by some clients.
+     * Shape:
+     * {
+     *   holdings: [{ coin, amount, value }],
+     *   totalValue
+     * }
+     */
+    static async getPortfolioSummary(req, res) {
+        try {
+            const userId = req.user._id;
+            const { portfolioData } = await CryptoController._fetchPortfolioDataForUser(userId);
+
+            const holdingsSummary = (portfolioData.holdings || []).map(h => ({
+                coin: h.symbol || h.crypto || h.coinId,
+                amount: h.quantity,
+                value: h.currentValue
+            }));
+
+            res.json({
+                holdings: holdingsSummary,
+                totalValue: portfolioData.portfolioValue
+            });
+        } catch (error) {
+            console.error('Portfolio summary error:', error);
+            const status = error.status || 500;
+            res.status(status).json({ error: status === 401 ? 'User not authenticated' : 'Error loading portfolio summary' });
         }
     }
 
@@ -289,7 +367,8 @@ class CryptoController {
             }
 
             return {
-                ...holding.toObject(),
+                // holding is a plain POJO from .lean() — no .toObject() needed
+                ...holding,
                 currentPrice,
                 currentValue,
                 totalInvested,
@@ -446,28 +525,38 @@ class CryptoController {
             const userId = req.user._id;  // From JWT middleware
 
             // 1. Get current holdings
-            const portfolio = await Portfolio.find({ userId });
+            const portfolio = await Portfolio.find({ userId }).lean();
 
             if (!portfolio || portfolio.length === 0) {
                 return res.json({ history: [] });
             }
 
-            // 2. Fetch 30-day price history for all coins in parallel
+            // 2. Fetch 30-day price history for all coins in parallel with timeout
             const historyPromises = portfolio.map(holding => {
-                return fetchCoinGeckoDataWithCache(
+                const fetchPromise = fetchCoinGeckoDataWithCache(
                     `https://api.coingecko.com/api/v3/coins/${holding.coinId}/market_chart?vs_currency=usd&days=30&interval=daily`,
                     null,
                     `chart-${holding.coinId}-30d`,
                     60 * 60 * 1000 // 1 hour cache
-                ).then(data => ({
-                    coinId: holding.coinId,
-                    quantity: holding.quantity,
-                    prices: data?.prices || [] // [timestamp, price]
-                })).catch(err => ({
-                    coinId: holding.coinId,
-                    quantity: holding.quantity,
-                    prices: [] // Fallback empty
-                }));
+                );
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('CoinGecko History timeout hit')), 3500)
+                );
+
+                return Promise.race([fetchPromise, timeoutPromise])
+                    .then(data => ({
+                        coinId: holding.coinId,
+                        quantity: holding.quantity,
+                        prices: data?.prices || [] // [timestamp, price]
+                    })).catch(err => {
+                        console.error(`History fallback for ${holding.coinId}:`, err.message);
+                        return {
+                            coinId: holding.coinId,
+                            quantity: holding.quantity,
+                            prices: [] // Fallback empty
+                        };
+                    });
             });
 
             const coinsHistory = await Promise.all(historyPromises);
@@ -494,9 +583,6 @@ class CryptoController {
             const history = Array.from(historyMap.entries())
                 .map(([date, value]) => ({ date, value }))
                 .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            // 5. Filter out incomplete days (optional, if some coins missing)
-            // For now, we return what we have.
 
             res.json({ history });
 
