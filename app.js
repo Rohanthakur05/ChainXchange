@@ -10,6 +10,9 @@ const compression = require('compression');
 const helmet = require('helmet');
 const MongoStore = require('connect-mongo');
 
+const connectDB = require('./config/database.js');
+const { connectRedis } = require('./utils/redisClient.js');
+
 const authRoutes = require('./routes/auth.js');
 const cryptoRoutes = require('./routes/crypto.js');
 const paymentRoutes = require('./routes/payment.js');
@@ -77,8 +80,11 @@ app.use((req, res, next) => {
 /* ─── Start server after MongoDB connects ────────────────────── */
 const startServer = async () => {
     try {
-        await mongoose.connect(MONGO_URI, { retryWrites: true, w: 'majority' });
-        console.log('✅ Connected to MongoDB');
+        // 1. Connect to Database (Throws if fails)
+        await connectDB();
+
+        // 2. Connect to Redis (Throws if fails)
+        await connectRedis();
 
         /* Session — stored in MongoDB, not memory */
         app.use(session({
@@ -219,10 +225,6 @@ const startServer = async () => {
         process.exit(1);
     }
 };
-
-/* ─── MongoDB reconnection handling ─────────────────────────── */
-mongoose.connection.on('error', (err) => console.error('MongoDB error:', err));
-mongoose.connection.on('disconnected', () => console.warn('⚠️ MongoDB disconnected'));
 
 startServer();
 

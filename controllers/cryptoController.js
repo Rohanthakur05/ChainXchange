@@ -2,7 +2,7 @@ const User = require('../models/User');
 const Portfolio = require('../models/Portfolio');
 const Transaction = require('../models/Transaction');
 const { fetchCoinGeckoDataWithCache } = require('../utils/geckoApi');
-const redisClient = require('../utils/redisClient'); // Import the shared client
+const { redisClient } = require('../utils/redisClient'); // Import the shared client
 
 // Cache for portfolio data. TTL of 120 seconds (2 minutes)
 const PORTFOLIO_CACHE_TTL = 120; // 2 minutes in seconds

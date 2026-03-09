@@ -1,77 +1,62 @@
 const mongoose = require('mongoose');
 
+// Delete cached model to avoid stale index warnings
+delete mongoose.models.PaymentTransaction;
+
 const paymentTransactionSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+
     type: {
         type: String,
         enum: ['deposit', 'withdrawal'],
         required: true
     },
+
     amount: {
         type: Number,
         required: true,
-        min: [0.01, 'Amount must be positive']
+        min: 0.01
     },
+
     paymentMethod: {
         type: String,
         enum: ['upi', 'card', 'bank', 'instant', 'demo'],
         required: true
     },
-    // Snapshot of the wallet balance immediately after this transaction completed.
-    // Essential for auditing and reconstructing balance history.
-    balanceAfter: {
-        type: Number,
-        min: 0
-    },
-    // Card fields (optional — only for card payments)
-    cardNumber: {
-        type: String
-    },
-    cardHolder: {
-        type: String
-    },
-    // UPI fields (optional — only for UPI payments)
-    upiId: {
-        type: String
-    },
-    // Bank transfer fields (optional — only for bank payments)
-    bankAccount: {
-        type: String
-    },
-    bankIfsc: {
-        type: String
-    },
-    bankName: {
-        type: String
-    },
-    bankHolder: {
-        type: String
-    },
-    // Idempotency key to prevent duplicate transactions
+
+    balanceAfter: Number,
+
+    cardNumber: String,
+    cardHolder: String,
+
+    upiId: String,
+
+    bankAccount: String,
+    bankIfsc: String,
+    bankName: String,
+    bankHolder: String,
+
     idempotencyKey: {
         type: String,
-        unique: true,
-        sparse: true // allows nulls, but enforces uniqueness when present
+
     },
+
     status: {
         type: String,
         enum: ['pending', 'completed', 'failed'],
         default: 'pending'
     },
-    failureReason: {
-        type: String
-    },
+
+    failureReason: String,
+
     timestamp: {
         type: Date,
         default: Date.now
     }
+
 }, { timestamps: true });
 
-// Index for efficient user transaction lookups
 paymentTransactionSchema.index({ userId: 1, timestamp: -1 });
+paymentTransactionSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('PaymentTransaction', paymentTransactionSchema);

@@ -9,16 +9,29 @@ const redisClient = createClient({
 });
 
 redisClient.on('error', (err) => {
-  console.error('Redis Client Error:', err);
-  // Note: The client will automatically try to reconnect.
+  console.error('❌ Redis Client Error:', err.message);
 });
 
-// Start the connection process
-// We don't await this here; the client will manage the connection state.
-// Calls will be queued until the connection is ready.
-redisClient.connect().catch(console.error);
+redisClient.on('connect', () => {
+  console.log('✅ Redis Connected');
+});
 
-console.log('Redis client initialized and connecting...');
+redisClient.on('ready', () => {
+  console.log('🚀 Redis is ready to receive commands');
+});
 
-// Export the single, connected client
-module.exports = redisClient;
+// Create an explicit connection function
+const connectRedis = async () => {
+  try {
+    console.log('Redis client initialized and connecting...');
+    await redisClient.connect();
+  } catch (error) {
+    console.error('❌ Failed to connect to Redis:', error.message);
+    throw error;
+  }
+};
+
+module.exports = {
+  redisClient,
+  connectRedis
+};
