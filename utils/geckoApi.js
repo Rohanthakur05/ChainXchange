@@ -1,7 +1,7 @@
 const async = require('async');
 const axios = require('axios');
 const { setTimeout: promiseTimeout } = require('timers/promises');
-const redisClient = require('./redisClient'); // Import the shared client
+const { redisClient } = require('./redisClient'); // Import the shared client
 
 const geckoQueue = async.queue(async (task) => {
     console.log('Processing CoinGecko request...'); // Debug log
