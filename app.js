@@ -95,25 +95,30 @@ app.use((req, res, next) => {
   next();
 });
 
-/* ─── Start Server After DB + Redis ─────────────────────────── */
+/* ─── DB + Redis initialisation (lazy, cached) ──────────────── */
+// On Vercel serverless each invocation may be a cold or warm start.
+// We initialise once and reuse the connection across warm invocations.
 
-const startServer = async () => {
-  try {
+let isInitialised = false;
+let initPromise = null;
+
+async function ensureInitialised() {
+  if (isInitialised) return;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
     await connectDB();
-    await connectRedis();
+    try { await connectRedis(); } catch (e) {
+      console.warn('[Redis] Could not connect — caching disabled:', e.message);
+    }
 
     /* Session Store */
-
     app.use(
       session({
-        secret:
-          process.env.SESSION_SECRET || 'chainxchange-session-secret',
+        secret: process.env.SESSION_SECRET || 'chainxchange-session-secret',
         resave: false,
         saveUninitialized: false,
-        store: MongoStore.create({
-          mongoUrl: MONGO_URI,
-          ttl: 24 * 60 * 60
-        }),
+        store: MongoStore.create({ mongoUrl: MONGO_URI, ttl: 24 * 60 * 60 }),
         cookie: {
           secure: NODE_ENV === 'production',
           httpOnly: true,
@@ -122,19 +127,13 @@ const startServer = async () => {
       })
     );
 
-    /* Optional Auth Middleware */
-
     app.use(optionalAuth);
 
     /* ─── Health Check ───────────────────────────────────────── */
-
     app.get('/health', (req, res) => {
       res.json({
         status: 'ok',
-        database:
-          mongoose.connection.readyState === 1
-            ? 'connected'
-            : 'disconnected',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: NODE_ENV
@@ -142,141 +141,141 @@ const startServer = async () => {
     });
 
     /* ─── API Routes ────────────────────────────────────────── */
-
     app.use('/auth', authRoutes);
     app.use('/crypto', cryptoRoutes);
     app.use('/payment', paymentRoutes);
     app.use('/alerts', alertsRoutes);
     app.use('/watchlist', watchlistRoutes);
     app.use('/api/portfolio', portfolioRoutes);
-
     app.get('/api/home', HomeController.getHomeData);
 
-    /* ─── WebSocket Connections ─────────────────────────────── */
-
-    io.on('connection', socket => {
-      console.log(`[WS] Client connected: ${socket.id}`);
-
-      socket.on('subscribe_coin', coinId => {
-        if (typeof coinId === 'string' && coinId.length < 50) {
-          socket.join(`coin:${coinId}`);
-        }
-      });
-
-      socket.on('unsubscribe_coin', coinId => {
-        socket.leave(`coin:${coinId}`);
-      });
-
-      socket.on('disconnect', () => {
-        console.log(`[WS] Client disconnected: ${socket.id}`);
-      });
-    });
-
-    /* ─── Market Price Broadcaster ─────────────────────────── */
-
-    const BROADCAST_INTERVAL_MS = 15000;
-
-    const broadcastPrices = async () => {
-      try {
-        const coins = await fetchCoinGeckoDataWithCache(
-          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false',
-          null,
-          'ws-price-broadcast',
-          30000
-        );
-
-        if (!Array.isArray(coins)) return;
-
-        const marketSnapshot = coins.map(c => ({
-          id: c.id,
-          price: c.current_price,
-          change24h: c.price_change_percentage_24h,
-          volume: c.total_volume
-        }));
-
-        io.emit('market_update', marketSnapshot);
-
-        coins.forEach(coin => {
-          io.to(`coin:${coin.id}`).emit('price_update', {
-            id: coin.id,
-            price: coin.current_price,
-            high24h: coin.high_24h,
-            low24h: coin.low_24h,
-            change24h: coin.price_change_percentage_24h,
-            volume: coin.total_volume,
-            updatedAt: Date.now()
-          });
-        });
-      } catch (err) {
-        console.warn('[WS] Price broadcast failed:', err.message);
-      }
-    };
-
-    /* Safe broadcast loop (prevents overlapping intervals) */
-
-    const startBroadcastLoop = async () => {
-      while (true) {
-        await broadcastPrices();
-        await new Promise(resolve =>
-          setTimeout(resolve, BROADCAST_INTERVAL_MS)
-        );
-      }
-    };
-
-    startBroadcastLoop();
-
-    /* ─── Production Static Build ───────────────────────────── */
-
-    if (NODE_ENV === 'production') {
-      app.use(express.static(path.join(__dirname, 'client/dist')));
-
-      app.get('*', (req, res) => {
-        res.sendFile(
-          path.join(__dirname, 'client/dist', 'index.html')
-        );
-      });
-    } else {
-      app.get('/', (req, res) => {
-        res.json({
-          message: 'ChainXchange API is running',
-          dbStatus: 'connected',
-          environment: NODE_ENV
-        });
-      });
-    }
-
     /* ─── Error Handlers ───────────────────────────────────── */
-
     app.use((req, res) => {
-      res.status(404).json({
-        error: 'Endpoint not found',
-        path: req.path
-      });
+      res.status(404).json({ error: 'Endpoint not found', path: req.path });
     });
 
     app.use((err, req, res, next) => {
       console.error('[Error]', err.stack);
-
       res.status(err.status || 500).json({
-        error:
-          NODE_ENV === 'development'
-            ? err.message
-            : 'Internal Server Error'
+        error: NODE_ENV === 'development' ? err.message : 'Internal Server Error'
       });
     });
 
-    server.listen(PORT, () => {
-      console.log(`✅ Server running on http://localhost:${PORT}`);
-      console.log(`📍 Health: http://localhost:${PORT}/health`);
-      console.log(`🌐 Environment: ${NODE_ENV}`);
-      console.log(`🔌 WebSocket price broadcaster active`);
+    isInitialised = true;
+  })();
+
+  return initPromise;
+}
+
+/* ─── Middleware that ensures DB is ready before handling requests */
+app.use(async (req, res, next) => {
+  try {
+    await ensureInitialised();
+    next();
+  } catch (err) {
+    console.error('❌ Initialisation failed:', err.message);
+    res.status(503).json({ error: 'Service temporarily unavailable' });
+  }
+});
+
+/* ─── Socket.IO event handlers ──────────────────────────────── */
+io.on('connection', socket => {
+  console.log(`[WS] Client connected: ${socket.id}`);
+
+  socket.on('subscribe_coin', coinId => {
+    if (typeof coinId === 'string' && coinId.length < 50) {
+      socket.join(`coin:${coinId}`);
+    }
+  });
+
+  socket.on('unsubscribe_coin', coinId => {
+    socket.leave(`coin:${coinId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`[WS] Client disconnected: ${socket.id}`);
+  });
+});
+
+/* ─── Market Price Broadcaster ─────────────────────────────── */
+const BROADCAST_INTERVAL_MS = 15000;
+
+const broadcastPrices = async () => {
+  try {
+    const coins = await fetchCoinGeckoDataWithCache(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false',
+      null,
+      'ws-price-broadcast',
+      30000
+    );
+
+    if (!Array.isArray(coins)) return;
+
+    const marketSnapshot = coins.map(c => ({
+      id: c.id,
+      price: c.current_price,
+      change24h: c.price_change_percentage_24h,
+      volume: c.total_volume
+    }));
+
+    io.emit('market_update', marketSnapshot);
+
+    coins.forEach(coin => {
+      io.to(`coin:${coin.id}`).emit('price_update', {
+        id: coin.id,
+        price: coin.current_price,
+        high24h: coin.high_24h,
+        low24h: coin.low_24h,
+        change24h: coin.price_change_percentage_24h,
+        volume: coin.total_volume,
+        updatedAt: Date.now()
+      });
     });
   } catch (err) {
-    console.error('❌ Failed to start server:', err.message);
-    process.exit(1);
+    console.warn('[WS] Price broadcast failed:', err.message);
   }
 };
 
-startServer();
+/* ─── Start server (only when run directly, not on Vercel) ──── */
+if (require.main === module) {
+  const startServer = async () => {
+    try {
+      await ensureInitialised();
+
+      /* Static build (production, self-hosted only) */
+      if (NODE_ENV === 'production') {
+        app.use(express.static(path.join(__dirname, 'client/dist')));
+        app.get('*', (req, res) => {
+          res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+        });
+      } else {
+        app.get('/', (req, res) => {
+          res.json({ message: 'ChainXchange API is running', environment: NODE_ENV });
+        });
+      }
+
+      /* Safe broadcast loop */
+      const startBroadcastLoop = async () => {
+        while (true) {
+          await broadcastPrices();
+          await new Promise(resolve => setTimeout(resolve, BROADCAST_INTERVAL_MS));
+        }
+      };
+      startBroadcastLoop();
+
+      server.listen(PORT, () => {
+        console.log(`✅ Server running on http://localhost:${PORT}`);
+        console.log(`📍 Health: http://localhost:${PORT}/health`);
+        console.log(`🌐 Environment: ${NODE_ENV}`);
+        console.log(`🔌 WebSocket price broadcaster active`);
+      });
+    } catch (err) {
+      console.error('❌ Failed to start server:', err.message);
+      process.exit(1);
+    }
+  };
+
+  startServer();
+}
 
 module.exports = app;

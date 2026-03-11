@@ -1,0 +1,39 @@
+{
+    "version": 2,
+    "buildCommand": "npm run vercel-build",
+    "outputDirectory": "client/dist",
+    "rewrites": [
+        {
+            "source": "/auth/:path*",
+            "destination": "/api/server"
+        },
+        {
+            "source": "/crypto/:path*",
+            "destination": "/api/server"
+        },
+        {
+            "source": "/payment/:path*",
+            "destination": "/api/server"
+        },
+        {
+            "source": "/alerts/:path*",
+            "destination": "/api/server"
+        },
+        {
+            "source": "/watchlist/:path*",
+            "destination": "/api/server"
+        },
+        {
+            "source": "/api/:path*",
+            "destination": "/api/server"
+        },
+        {
+            "source": "/health",
+            "destination": "/api/server"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}

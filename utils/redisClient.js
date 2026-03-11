@@ -26,8 +26,11 @@ const connectRedis = async () => {
     console.log('Redis client initialized and connecting...');
     await redisClient.connect();
   } catch (error) {
-    console.error('❌ Failed to connect to Redis:', error.message);
-    throw error;
+    console.warn('⚠️ Failed to connect to Redis. Running without cache:', error.message);
+    // Stub out the methods if connection fails so app doesn't crash on Vercel
+    redisClient.get = async () => null;
+    redisClient.setEx = async () => 'OK';
+    redisClient.del = async () => 0;
   }
 };
 
