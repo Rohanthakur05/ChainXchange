@@ -116,7 +116,9 @@ async function fetchCoinGeckoDataWithCache(endpoint, params = null, cacheKey, tt
 
     // 4. Store in L2 Redis Cache
     try {
-        await redisClient.setEx(cacheKey, ttlSeconds, JSON.stringify(data));
+        // ttlSeconds is passed as milliseconds by callers — convert to seconds for Redis
+        const ttlSecs = Math.ceil(ttlSeconds > 1000 ? ttlSeconds / 1000 : ttlSeconds);
+        await redisClient.setEx(cacheKey, ttlSecs, JSON.stringify(data));
     } catch (cacheError) {
         console.error(`Redis SETEX error for key ${cacheKey}:`, cacheError.message);
     }
