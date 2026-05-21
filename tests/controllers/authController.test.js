@@ -11,6 +11,7 @@ jest.mock('../../models/Transaction');
 const bcrypt = require('bcrypt');
 const User = require('../../models/User');
 const authController = require('../../controllers/authController');
+const { validateSignup, validateLogin } = require('../../middleware/validate');
 
 // Build minimal express app matching the real app setup
 const app = express();
@@ -18,8 +19,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser('test-secret'));
 
-app.post('/auth/signup', authController.signup);
-app.post('/auth/login', authController.login);
+app.post('/auth/signup', validateSignup, authController.signup);
+app.post('/auth/login', validateLogin, authController.login);
 app.get('/auth/logout', authController.logout);
 
 // ─────────────────────────────────────────
@@ -34,7 +35,7 @@ describe('POST /auth/signup', () => {
       .send({ username: 'testuser', email: 'test@test.com' }); // missing password
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('All fields are required.');
+    expect(res.body.error).toContain('password'); // password is required/must be string
   });
 
   it('should return 409 if username or email already exists', async () => {
@@ -58,11 +59,7 @@ describe('POST /auth/signup', () => {
       email: 'new@test.com',
       wallet: 0,
     };
-    // Mock the User constructor and save()
-    User.mockImplementation(() => ({
-      save: jest.fn().mockResolvedValue(savedUser),
-      ...savedUser,
-    }));
+    User.create.mockResolvedValue(savedUser);
 
     const res = await request(app)
       .post('/auth/signup')
@@ -85,18 +82,19 @@ describe('POST /auth/login', () => {
       .send({ username: 'testuser' }); // missing password
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Username and password are required.');
+    expect(res.body.error).toContain('Password');
   });
 
   it('should return 401 if user is not found', async () => {
     User.findOne.mockResolvedValue(null);
+    bcrypt.compare.mockResolvedValue(false);
 
     const res = await request(app)
       .post('/auth/login')
       .send({ username: 'ghost', password: 'wrongpassword' });
 
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('Invalid username or password.');
+    expect(res.body.error).toBe('Invalid credentials.');
   });
 
   it('should return 401 if password is incorrect', async () => {
@@ -112,7 +110,7 @@ describe('POST /auth/login', () => {
       .send({ username: 'testuser', password: 'wrongpassword' });
 
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('Invalid username or password.');
+    expect(res.body.error).toBe('Invalid credentials.');
   });
 
   it('should return 200 and user data on successful login', async () => {
@@ -147,3 +145,4 @@ describe('GET /auth/logout', () => {
     expect(res.body.message).toBe('Logged out successfully');
   });
 });
+

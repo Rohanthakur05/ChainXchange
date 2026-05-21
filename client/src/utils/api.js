@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { classifyError, parseError, logError } from './errors';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 const api = axios.create({
-    baseURL: '/', // Proxy handles the rest
+    baseURL: API_BASE_URL,
     withCredentials: true, // Send cookies
     timeout: 10000, // 10 second timeout
     headers: {

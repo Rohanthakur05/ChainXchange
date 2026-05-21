@@ -10,6 +10,6 @@
  * long-running server (Railway, Render, etc.) if needed.
  */
 
-const app = require('../app');
+const { app } = require('../app');
 
 module.exports = app;

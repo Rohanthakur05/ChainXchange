@@ -183,11 +183,22 @@ const AddMoneyModal = ({ isOpen, onClose }) => {
         } catch (err) {
             setStatus('error');
             const serverError = err.response?.data;
-            setErrorMessage(serverError?.error || 'Payment failed. Please try again.');
-            setErrorCode(serverError?.code || '');
+            const code = serverError?.code || serverError?.errorCode || err.errorCode || '';
+            const msg =
+                serverError?.error ||
+                serverError?.message ||
+                err.userMessage ||
+                'Payment failed. Please try again.';
 
-            // On duplicate, don't allow retry with same key
-            if (serverError?.code === 'DUPLICATE_PAYMENT') {
+            setErrorMessage(
+                import.meta.env.DEV && serverError?.debug
+                    ? `${msg} (${serverError.debug})`
+                    : msg
+            );
+            setErrorCode(code);
+
+            // On duplicate or auth failure, reset idempotency key for a fresh attempt
+            if (code === 'DUPLICATE_PAYMENT' || code === 'AUTH_REQUIRED') {
                 idempotencyKeyRef.current = null;
             }
         }

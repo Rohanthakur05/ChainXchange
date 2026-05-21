@@ -246,9 +246,16 @@ export const classifyError = (error) => {
         const status = error.response.status;
         const data = error.response.data;
 
-        // Check for specific error codes from backend
-        if (data?.code) {
-            const backendCode = data.code.toUpperCase();
+        // Check for specific error codes from backend (payment + auth)
+        const backendCode = (data?.code || data?.errorCode || '').toUpperCase();
+        if (backendCode) {
+            const paymentCodes = [
+                'SERVER_ERROR', 'DUPLICATE_PAYMENT', 'PAYMENT_PENDING',
+                'MISSING_AMOUNT', 'INVALID_AMOUNT', 'AMOUNT_EXCEEDS_LIMIT',
+                'INVALID_UPI', 'INCOMPLETE_CARD', 'INCOMPLETE_BANK', 'INVALID_METHOD',
+                'VALIDATION_ERROR', 'USER_NOT_FOUND', 'INSUFFICIENT_FUNDS'
+            ];
+            if (paymentCodes.includes(backendCode)) return backendCode;
             if (Object.values(ErrorCode).includes(backendCode)) {
                 return backendCode;
             }
@@ -320,14 +327,25 @@ export const parseError = (error, context = {}) => {
     // Use backend message if it's more specific
     // Apply to auth/validation errors too so users see the real reason (e.g. "Invalid username or password.")
     const backendMessage = error.response?.data?.error || error.response?.data?.message;
-    const useBackendMessage = [
+    const useBackendMessage = new Set([
         ErrorCode.UNKNOWN,
         ErrorCode.AUTH_REQUIRED,
         ErrorCode.AUTH_INVALID_CREDENTIALS,
         ErrorCode.AUTH_SESSION_EXPIRED,
         ErrorCode.API_BAD_REQUEST,
-    ];
-    if (backendMessage && backendMessage.length < 100 && useBackendMessage.includes(code)) {
+        ErrorCode.API_SERVER_ERROR,
+        'SERVER_ERROR',
+        'DUPLICATE_PAYMENT',
+        'PAYMENT_PENDING',
+        'INVALID_UPI',
+        'INCOMPLETE_CARD',
+        'INCOMPLETE_BANK',
+        'INSUFFICIENT_FUNDS',
+        'VALIDATION_ERROR',
+        'MISSING_AMOUNT',
+        'INVALID_AMOUNT',
+    ]);
+    if (backendMessage && backendMessage.length < 200 && useBackendMessage.has(code)) {
         parsed.message = backendMessage;
     }
 

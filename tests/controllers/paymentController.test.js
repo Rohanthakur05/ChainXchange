@@ -11,6 +11,11 @@ const mongoose = require('mongoose');
 jest.mock('../../models/User');
 jest.mock('../../models/PaymentTransaction');
 
+PaymentTransaction.create = jest.fn().mockImplementation((docs) => {
+  const doc = Array.isArray(docs) ? docs[0] : docs;
+  return Promise.resolve([{ ...doc, _id: 'mock-tx-id', save: jest.fn().mockResolvedValue(true) }]);
+});
+
 // Mock mongoose sessions for atomic transactions
 const mockSession = {
   withTransaction: jest.fn(async (fn) => await fn()),
@@ -63,7 +68,6 @@ describe('Payment Controller', () => {
       const updatedUser = { _id: 'test-user-id', wallet: 150 };
 
       PaymentTransaction.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
-      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
       User.findByIdAndUpdate.mockResolvedValue(updatedUser);
 
       const res = await request(app)
@@ -88,7 +92,6 @@ describe('Payment Controller', () => {
       const updatedUser = { _id: 'test-user-id', wallet: 200 };
 
       PaymentTransaction.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
-      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
       User.findByIdAndUpdate.mockResolvedValue(updatedUser);
 
       const res = await request(app)
@@ -109,7 +112,6 @@ describe('Payment Controller', () => {
       const updatedUser = { _id: 'test-user-id', wallet: 500 };
 
       PaymentTransaction.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
-      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
       User.findByIdAndUpdate.mockResolvedValue(updatedUser);
 
       const res = await request(app)
@@ -186,7 +188,6 @@ describe('Payment Controller', () => {
       const updatedUser = { _id: 'test-user-id', wallet: 1000 };
 
       User.findByIdAndUpdate.mockResolvedValue(updatedUser);
-      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
 
       const res = await request(app).post('/wallet/demo-deposit');
 
@@ -202,7 +203,6 @@ describe('Payment Controller', () => {
       const updatedUser = { _id: 'test-user-id', wallet: 2000 };
 
       User.findByIdAndUpdate.mockResolvedValue(updatedUser);
-      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
 
       const res = await request(app).post('/wallet/demo-deposit');
 
@@ -212,7 +212,7 @@ describe('Payment Controller', () => {
     });
 
     it('should return 500 if the DB update fails', async () => {
-      mockSession.withTransaction.mockRejectedValueOnce(new Error('DB error'));
+      User.findByIdAndUpdate.mockRejectedValueOnce(new Error('DB error'));
 
       const res = await request(app).post('/wallet/demo-deposit');
 
@@ -228,7 +228,6 @@ describe('Payment Controller', () => {
 
       // Atomic guard: findOneAndUpdate returns the updated user
       User.findOneAndUpdate.mockResolvedValue(updatedUser);
-      PaymentTransaction.prototype.save = jest.fn().mockResolvedValue(true);
 
       const res = await request(app)
         .post('/wallet/withdraw')

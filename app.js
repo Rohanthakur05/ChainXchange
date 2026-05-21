@@ -2,16 +2,20 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
-const dotenv = require('dotenv');
 const session = require('express-session');
 const http = require('http');
 const { Server } = require('socket.io');
 const compression = require('compression');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const MongoStore = require('connect-mongo');
 
+const { config, validateEnv } = require('./config/env');
 const connectDB = require('./config/database.js');
 const { connectRedis } = require('./utils/redisClient.js');
+const logger = require('./utils/logger');
+const requestLogger = require('./middleware/requestLogger');
+const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth.js');
 const cryptoRoutes = require('./routes/crypto.js');
@@ -24,180 +28,193 @@ const { optionalAuth } = require('./middleware/auth');
 const HomeController = require('./controllers/homeController');
 const { fetchCoinGeckoDataWithCache } = require('./utils/geckoApi');
 
-dotenv.config();
+validateEnv();
 
 const app = express();
 const server = http.createServer(app);
 
-/* ─── Environment ────────────────────────────────────────────── */
-
-const PORT = process.env.PORT || 8000;
-const MONGO_URI =
-  process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/crypto-trading';
-
-const NODE_ENV = process.env.NODE_ENV || 'development';
-
-const ALLOWED_ORIGINS = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(',').map(o => o.trim())
-  : ['http://localhost:5173', 'http://localhost:5174'];
+/* ─── Trust proxy (Render / Railway / nginx) ─────────────────── */
+if (config.trustProxy) {
+  app.set('trust proxy', 1);
+}
 
 /* ─── Socket.IO ──────────────────────────────────────────────── */
-
 const io = new Server(server, {
   cors: {
-    origin: ALLOWED_ORIGINS,
+    origin: config.clientUrl,
     methods: ['GET', 'POST'],
     credentials: true
   }
 });
 
 /* ─── Security & Core Middleware ─────────────────────────────── */
-
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://s3.tradingview.com'],
-        frameSrc: ["'self'", 'https://s.tradingview.com'],
-        connectSrc: ["'self'", 'wss:', 'https://api.coingecko.com'],
-        imgSrc: ["'self'", 'data:', 'https:', 'blob:']
-      }
+    contentSecurityPolicy: config.isProduction
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://s3.tradingview.com'],
+            frameSrc: ["'self'", 'https://s.tradingview.com'],
+            connectSrc: [
+              "'self'",
+              'wss:',
+              'https://api.coingecko.com',
+              'https://*.onrender.com',
+              'https://*.vercel.app'
+            ],
+            imgSrc: ["'self'", 'data:', 'https:', 'blob:']
+          }
+        }
+      : false
+  })
+);
+
+app.use(requestLogger);
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(cookieParser(config.cookieSecret));
+app.use(compression());
+
+/* ─── CORS ───────────────────────────────────────────────────── */
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin && config.clientUrl.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  }
+
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+/* ─── Rate limiting (global) ─────────────────────────────────── */
+app.use(
+  rateLimit({
+    windowMs: config.rateLimitWindowMs,
+    max: config.rateLimitMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: 'Too many requests. Please try again later.',
+      errorCode: 'RATE_LIMITED'
+    },
+    skip: (req) => req.path === '/health' || req.path === '/api/health'
+  })
+);
+
+/* ─── Session ────────────────────────────────────────────────── */
+app.use(
+  session({
+    secret: config.sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: config.mongoUri,
+      ttl: 24 * 60 * 60
+    }),
+    cookie: {
+      secure: config.cookieSecure,
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
     }
   })
 );
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-app.use(cookieParser(process.env.COOKIE_SECRET || 'chainxchange-cookie-secret'));
-app.use(compression());
+app.use(optionalAuth);
 
-/* ─── CORS Middleware ───────────────────────────────────────── */
+/* ─── Health & Root (always available) ───────────────────────── */
+const healthHandler = (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = dbState === 1 ? 'connected' : dbState === 2 ? 'connecting' : 'disconnected';
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+  res.json({
+    status: dbStatus === 'connected' ? 'ok' : 'degraded',
+    database: dbStatus,
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    environment: config.env,
+    version: '1.0.0'
+  });
+};
 
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader(
-      'Access-Control-Allow-Methods',
-      'GET,POST,PUT,PATCH,DELETE,OPTIONS'
-    );
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'Content-Type,Authorization'
-    );
-  }
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-
-  next();
+app.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'ChainXchange API is running',
+    environment: config.env,
+    docs: {
+      health: '/health',
+      auth: '/auth',
+      payment: '/payment',
+      crypto: '/crypto'
+    }
+  });
 });
 
-/* ─── DB + Redis initialisation (lazy, cached) ──────────────── */
-// On Vercel serverless each invocation may be a cold or warm start.
-// We initialise once and reuse the connection across warm invocations.
+/* ─── API Routes ─────────────────────────────────────────────── */
+app.use('/auth', authRoutes);
+app.use('/crypto', cryptoRoutes);
+app.use('/payment', paymentRoutes);
+app.use('/alerts', alertsRoutes);
+app.use('/watchlist', watchlistRoutes);
+app.use('/api/portfolio', portfolioRoutes);
+app.get('/api/home', HomeController.getHomeData);
 
-let isInitialised = false;
-let initPromise = null;
+/* ─── Production SPA (Express 5 compatible wildcard) ─────────── */
+if (config.isProduction) {
+  const clientDist = path.join(__dirname, 'client/dist');
 
-async function ensureInitialised() {
-  if (isInitialised) return;
-  if (initPromise) return initPromise;
+  app.use(express.static(clientDist));
 
-  initPromise = (async () => {
-    await connectDB();
-    try { await connectRedis(); } catch (e) {
-      console.warn('[Redis] Could not connect — caching disabled:', e.message);
+  // Express 5 requires named wildcard — `*` is invalid in path-to-regexp v8+
+  app.get('/{*splat}', (req, res, next) => {
+    // Let API paths fall through to 404 handler
+    const apiPrefixes = ['/auth', '/crypto', '/payment', '/alerts', '/watchlist', '/api', '/health'];
+    if (apiPrefixes.some((p) => req.path.startsWith(p))) {
+      return next();
     }
 
-    /* Session Store */
-    app.use(
-      session({
-        secret: process.env.SESSION_SECRET || 'chainxchange-session-secret',
-        resave: false,
-        saveUninitialized: false,
-        store: MongoStore.create({ mongoUrl: MONGO_URI, ttl: 24 * 60 * 60 }),
-        cookie: {
-          secure: NODE_ENV === 'production',
-          httpOnly: true,
-          maxAge: 24 * 60 * 60 * 1000
-        }
-      })
-    );
-
-    app.use(optionalAuth);
-
-    /* ─── Health Check ───────────────────────────────────────── */
-    app.get('/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: NODE_ENV
-      });
+    res.sendFile(path.join(clientDist, 'index.html'), (err) => {
+      if (err) {
+        logger.warn('SPA index.html not found — run npm run vercel-build', { path: clientDist });
+        return next();
+      }
     });
-
-    /* ─── API Routes ────────────────────────────────────────── */
-    app.use('/auth', authRoutes);
-    app.use('/crypto', cryptoRoutes);
-    app.use('/payment', paymentRoutes);
-    app.use('/alerts', alertsRoutes);
-    app.use('/watchlist', watchlistRoutes);
-    app.use('/api/portfolio', portfolioRoutes);
-    app.get('/api/home', HomeController.getHomeData);
-
-    /* ─── Error Handlers ───────────────────────────────────── */
-    app.use((req, res) => {
-      res.status(404).json({ error: 'Endpoint not found', path: req.path });
-    });
-
-    app.use((err, req, res, next) => {
-      console.error('[Error]', err.stack);
-      res.status(err.status || 500).json({
-        error: NODE_ENV === 'development' ? err.message : 'Internal Server Error'
-      });
-    });
-
-    isInitialised = true;
-  })();
-
-  return initPromise;
+  });
 }
 
-/* ─── Middleware that ensures DB is ready before handling requests */
-app.use(async (req, res, next) => {
-  try {
-    await ensureInitialised();
-    next();
-  } catch (err) {
-    console.error('❌ Initialisation failed:', err.message);
-    res.status(503).json({ error: 'Service temporarily unavailable' });
-  }
-});
+/* ─── Error Handlers ─────────────────────────────────────────── */
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
-/* ─── Socket.IO event handlers ──────────────────────────────── */
-io.on('connection', socket => {
-  console.log(`[WS] Client connected: ${socket.id}`);
+/* ─── Socket.IO ──────────────────────────────────────────────── */
+io.on('connection', (socket) => {
+  logger.debug('WebSocket client connected', { socketId: socket.id });
 
-  socket.on('subscribe_coin', coinId => {
+  socket.on('subscribe_coin', (coinId) => {
     if (typeof coinId === 'string' && coinId.length < 50) {
       socket.join(`coin:${coinId}`);
     }
   });
 
-  socket.on('unsubscribe_coin', coinId => {
+  socket.on('unsubscribe_coin', (coinId) => {
     socket.leave(`coin:${coinId}`);
   });
 
   socket.on('disconnect', () => {
-    console.log(`[WS] Client disconnected: ${socket.id}`);
+    logger.debug('WebSocket client disconnected', { socketId: socket.id });
   });
 });
 
-/* ─── Market Price Broadcaster ─────────────────────────────── */
+/* ─── Market Price Broadcaster ───────────────────────────────── */
 const BROADCAST_INTERVAL_MS = 15000;
 
 const broadcastPrices = async () => {
@@ -211,7 +228,7 @@ const broadcastPrices = async () => {
 
     if (!Array.isArray(coins)) return;
 
-    const marketSnapshot = coins.map(c => ({
+    const marketSnapshot = coins.map((c) => ({
       id: c.id,
       price: c.current_price,
       change24h: c.price_change_percentage_24h,
@@ -220,7 +237,7 @@ const broadcastPrices = async () => {
 
     io.emit('market_update', marketSnapshot);
 
-    coins.forEach(coin => {
+    coins.forEach((coin) => {
       io.to(`coin:${coin.id}`).emit('price_update', {
         id: coin.id,
         price: coin.current_price,
@@ -232,45 +249,48 @@ const broadcastPrices = async () => {
       });
     });
   } catch (err) {
-    console.warn('[WS] Price broadcast failed:', err.message);
+    logger.warn('Price broadcast failed', { error: err.message });
   }
 };
 
-/* ─── Start server (only when run directly, not on Vercel) ──── */
+/* ─── Graceful shutdown ──────────────────────────────────────── */
+const gracefulShutdown = (signal) => {
+  logger.info(`${signal} received — shutting down gracefully`);
+  server.close(() => {
+    mongoose.connection.close(false).then(() => {
+      logger.info('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+  setTimeout(() => process.exit(1), 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+/* ─── Start server ───────────────────────────────────────────── */
 if (require.main === module) {
   const startServer = async () => {
     try {
-      await ensureInitialised();
+      await connectDB();
 
-      /* Static build (production, self-hosted only) */
-      if (NODE_ENV === 'production') {
-        app.use(express.static(path.join(__dirname, 'client/dist')));
-        app.get('*', (req, res) => {
-          res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
-        });
-      } else {
-        app.get('/', (req, res) => {
-          res.json({ message: 'ChainXchange API is running', environment: NODE_ENV });
-        });
+      try {
+        await connectRedis();
+      } catch (e) {
+        logger.warn('Redis unavailable — caching disabled', { error: e.message });
       }
 
-      /* Safe broadcast loop */
-      const startBroadcastLoop = async () => {
-        while (true) {
-          await broadcastPrices();
-          await new Promise(resolve => setTimeout(resolve, BROADCAST_INTERVAL_MS));
-        }
-      };
-      startBroadcastLoop();
+      setInterval(broadcastPrices, BROADCAST_INTERVAL_MS);
 
-      server.listen(PORT, () => {
-        console.log(`✅ Server running on http://localhost:${PORT}`);
-        console.log(`📍 Health: http://localhost:${PORT}/health`);
-        console.log(`🌐 Environment: ${NODE_ENV}`);
-        console.log(`🔌 WebSocket price broadcaster active`);
+      server.listen(config.port, () => {
+        logger.info('Server started', {
+          url: `http://localhost:${config.port}`,
+          health: `http://localhost:${config.port}/health`,
+          environment: config.env
+        });
       });
     } catch (err) {
-      console.error('❌ Failed to start server:', err.message);
+      logger.error('Failed to start server', { error: err.message });
       process.exit(1);
     }
   };
@@ -278,4 +298,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = app;
+module.exports = { app, server, io };

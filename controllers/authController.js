@@ -3,13 +3,14 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const { JWT_SECRET } = require('../middleware/auth');
+const { config } = require('../config/env');
 
 /* ─── Cookie options ──────────────────────────────────────────── */
 const COOKIE_OPTIONS = {
-    httpOnly: true,                                       // Not accessible via JS
-    sameSite: 'lax',                                      // CSRF protection
-    secure: process.env.NODE_ENV === 'production',        // HTTPS-only in prod
-    maxAge: 7 * 24 * 60 * 60 * 1000                      // 7 days
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: config.cookieSecure,
+    maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
 /**

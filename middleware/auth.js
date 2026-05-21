@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { config } = require('../config/env');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'chainxchange-dev-secret-change-in-production';
+const JWT_SECRET = config.jwtSecret;
 
 /**
  * Verify JWT token from cookie and attach user to request.
@@ -11,7 +12,12 @@ const isAuthenticated = async (req, res, next) => {
     try {
         const token = req.cookies.token;
         if (!token) {
-            return res.status(401).json({ error: 'Authentication required. Please log in.' });
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required. Please log in.',
+                message: 'Authentication required. Please log in.',
+                errorCode: 'AUTH_REQUIRED'
+            });
         }
 
         let decoded;

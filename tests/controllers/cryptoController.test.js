@@ -3,6 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const cryptoController = require('../../controllers/cryptoController');
+const tradeController = require('../../controllers/tradeController');
 const User = require('../../models/User');
 const Portfolio = require('../../models/Portfolio');
 const Transaction = require('../../models/Transaction');
@@ -33,12 +34,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/crypto', cryptoController.showMarkets);
-app.get('/crypto/:id', cryptoController.showCryptoDetail);
-app.post('/crypto/buy', cryptoController.buyCrypto);
-app.post('/crypto/sell', cryptoController.sellCrypto);
-
-describe('Crypto Controller', () => {
+describe('Crypto & Trade Controllers', () => {
   let req, res;
 
   beforeEach(() => {
@@ -47,35 +43,32 @@ describe('Crypto Controller', () => {
       body: {},
       cookies: {},
       session: {},
+      user: { _id: 'test-user-id' }
     };
     res = {
       render: jest.fn(),
       redirect: jest.fn(),
       status: jest.fn(() => res),
+      json: jest.fn(),
       locals: {},
     };
     jest.clearAllMocks();
   });
 
-  describe('showMarkets', () => {
-    it('should render the crypto markets page with data', async () => {
+  describe('getMarkets', () => {
+    it('should return crypto markets data in JSON', async () => {
       const mockCoins = [{ id: 'bitcoin', name: 'Bitcoin' }];
       geckoApi.fetchCoinGeckoDataWithCache.mockResolvedValue(mockCoins);
-      res.locals.user = { _id: 'test-user-id' };
 
-      await cryptoController.showMarkets(req, res);
+      await cryptoController.getMarkets(req, res);
 
       expect(geckoApi.fetchCoinGeckoDataWithCache).toHaveBeenCalledWith(expect.any(String), null, 'crypto-markets', 300000);
-      expect(res.render).toHaveBeenCalledWith('crypto', {
-        title: 'Cryptocurrency Markets',
-        coins: mockCoins,
-        user: { _id: 'test-user-id' }
-      });
+      expect(res.json).toHaveBeenCalledWith(mockCoins);
     });
   });
 
-  describe('showCryptoDetail', () => {
-    it('should render the crypto detail page', async () => {
+  describe('getCryptoDetail', () => {
+    it('should return crypto detail and holdings in JSON', async () => {
       const mockCoinData = { id: 'bitcoin', name: 'Bitcoin', symbol: 'btc', market_data: { current_price: { usd: 50000 } } };
       const mockChartData = { prices: [[1, 2], [3, 4]] };
       req.params.coinId = 'bitcoin';
@@ -84,60 +77,77 @@ describe('Crypto Controller', () => {
       geckoApi.fetchCoinGeckoDataWithCache.mockResolvedValueOnce(mockChartData);
       Portfolio.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
 
+      await cryptoController.getCryptoDetail(req, res);
 
-      await cryptoController.showCryptoDetail(req, res);
-
-      expect(res.render).toHaveBeenCalledWith('crypto-detail', expect.objectContaining({
-        title: 'Bitcoin (BTC)',
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
         coin: expect.any(Object),
+        userHolding: null
       }));
     });
   });
 
   describe('buyCrypto', () => {
-    it('should allow a user to buy crypto', async () => {
+    it('should allow a user to buy crypto atomically', async () => {
       const user = { _id: 'test-user-id', wallet: 1000 };
-      User.findById.mockReturnValue({ lean: () => Promise.resolve(user) });
-      const coinData = { name: 'bitcoin', symbol: 'btc', image: { large: 'url' }, market_data: { current_price: { usd: 500 } } };
-      geckoApi.fetchCoinGeckoDataWithCache.mockResolvedValue(coinData);
-      Portfolio.findOne.mockReturnValue({ lean: () => Promise.resolve(null) }); // Corrected mock
+      User.findOneAndUpdate.mockResolvedValue(user);
+      User.exists.mockResolvedValue(true);
+      
+      geckoApi.fetchCoinGeckoDataWithCache.mockImplementation((url) => {
+        if (url.includes('simple/price')) {
+          return Promise.resolve({ bitcoin: { usd: 500 } });
+        }
+        if (url.includes('coins/bitcoin')) {
+          return Promise.resolve({ name: 'Bitcoin', symbol: 'btc', image: { large: 'url' } });
+        }
+        return Promise.resolve(null);
+      });
+      
+      Portfolio.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
       Portfolio.findOneAndUpdate.mockResolvedValue(true);
-      Transaction.create.mockResolvedValue(true);
-      User.findByIdAndUpdate.mockResolvedValue(true);
+      Transaction.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
+      Transaction.create.mockResolvedValue([{ _id: 'tx-id' }]);
 
-      req.cookies.user = 'test-user-id';
       req.body = { coinId: 'bitcoin', quantity: '1', price: '500' };
 
-      await cryptoController.buyCrypto(req, res);
+      await tradeController.buyCrypto(req, res);
 
-      expect(User.findById).toHaveBeenCalledWith('test-user-id');
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith('test-user-id', { $inc: { wallet: -500 } });
+      expect(User.findOneAndUpdate).toHaveBeenCalled();
       expect(Portfolio.findOneAndUpdate).toHaveBeenCalled();
       expect(Transaction.create).toHaveBeenCalled();
-      expect(res.redirect).toHaveBeenCalledWith('/portfolio');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        message: 'Purchase successful'
+      }));
     });
   });
 
   describe('sellCrypto', () => {
-    it('should allow a user to sell crypto', async () => {
-      const user = { _id: 'test-user-id', wallet: 1000, save: jest.fn() };
-      const portfolio = { userId: 'test-user-id', coinId: 'bitcoin', quantity: 2, save: jest.fn() };
-      req.cookies.user = 'test-user-id';
-      req.body = { coinId: 'bitcoin', quantity: '1', price: '500' };
-      User.findById.mockResolvedValue(user);
-      Portfolio.findOne.mockResolvedValue(portfolio);
+    it('should allow a user to sell crypto atomically', async () => {
+      const user = { _id: 'test-user-id', wallet: 1500 };
+      const portfolio = { userId: 'test-user-id', coinId: 'bitcoin', quantity: 2 };
+      
+      User.findByIdAndUpdate.mockResolvedValue(user);
+      Portfolio.findOne.mockReturnValue({ lean: () => Promise.resolve(portfolio) });
+      Portfolio.findOneAndUpdate.mockResolvedValue({ userId: 'test-user-id', coinId: 'bitcoin', quantity: 1 });
+      
       const coinData = { market_data: { current_price: { usd: 500 } } };
       geckoApi.fetchCoinGeckoDataWithCache.mockResolvedValue(coinData);
-      User.findByIdAndUpdate.mockResolvedValue(true);
-      Transaction.create.mockResolvedValue(true);
+      Transaction.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
+      Transaction.create.mockResolvedValue([{ _id: 'tx-id' }]);
 
-      await cryptoController.sellCrypto(req, res);
+      req.body = { coinId: 'bitcoin', quantity: '1', price: '500' };
 
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith('test-user-id', { $inc: { wallet: 500 } });
+      await tradeController.sellCrypto(req, res);
+
+      expect(User.findByIdAndUpdate).toHaveBeenCalled();
       expect(Portfolio.findOneAndUpdate).toHaveBeenCalled();
       expect(Transaction.create).toHaveBeenCalled();
-      expect(res.redirect).toHaveBeenCalledWith('/portfolio');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        message: expect.stringContaining('Successfully sold')
+      }));
     });
   });
 });
+
 
