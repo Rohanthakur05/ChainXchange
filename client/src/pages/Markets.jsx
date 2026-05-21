@@ -1,12 +1,15 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
     Star, TrendingUp, TrendingDown, GitCompare,
-    Search, Globe, BarChart2, Flame, ArrowUpRight, ArrowDownRight
+    Search, Globe, BarChart2, Flame, ArrowUpRight, ArrowDownRight,
+    RefreshCw, AlertCircle,
 } from 'lucide-react';
-import api from '../utils/api';
 import { useWatchlist } from '../context/WatchlistContext';
 import { useCompare } from '../context/CompareContext';
+import { useToast } from '../components/ui/Toast';
+import { useMarketsData } from '../hooks/useMarketsData';
+import MarketsSkeleton from '../components/markets/MarketsSkeleton';
 import WatchlistStarButton from '../components/watchlist/WatchlistStarButton/WatchlistStarButton';
 import { CATEGORIES, filterCoinsByCategory } from '../config/categoryData';
 import PriceCell from '../components/markets/PriceCell';
@@ -63,33 +66,25 @@ const fmt = (n) => {
 };
 
 const Markets = () => {
-    const [coins, setCoins] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { coins, loading, isRefreshing, error, isFallback, reload } = useMarketsData();
     const [searchParams, setSearchParams] = useSearchParams();
     const [localSearch, setLocalSearch] = useState('');
+    const toast = useToast();
+    const fallbackToastShown = useRef(false);
 
     const { watchlists } = useWatchlist();
-    const { openCompare, selectedCoinIds, toggleCoin } = useCompare();
+    const { openCompare, selectedCoinIds } = useCompare();
 
     const activeFilter = searchParams.get('filter') || 'all';
     const activeWatchlist = searchParams.get('watchlist') || null;
     const activeCategory = searchParams.get('category') || 'all';
-    const searchQuery = (searchParams.get('search') || localSearch).toLowerCase();
 
     useEffect(() => {
-        const fetchMarkets = async () => {
-            try {
-                const response = await api.get('/crypto');
-                const data = Array.isArray(response.data) ? response.data : response.data.coins || [];
-                setCoins(data);
-            } catch (err) {
-                console.error('Error fetching markets', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchMarkets();
-    }, []);
+        if (isFallback && !fallbackToastShown.current) {
+            fallbackToastShown.current = true;
+            toast.warning('Market feed delayed', 'Showing cached prices until the API responds.');
+        }
+    }, [isFallback, toast]);
 
     /* Global stats derived from coin data */
     const globalStats = useMemo(() => {
@@ -149,19 +144,31 @@ const Markets = () => {
 
     const isDefaultFilter = !activeWatchlist;
 
-    if (loading) {
+    if (loading && coins.length === 0) {
         return (
             <div className={styles.container}>
-                <div className={styles.loadingState}>
-                    <div className={styles.spinner} />
-                    <span>Loading market data...</span>
-                </div>
+                <MarketsSkeleton />
             </div>
         );
     }
 
     return (
         <div className={styles.container}>
+
+            {(error || isFallback || isRefreshing) && (
+                <div className={styles.banner}>
+                    <AlertCircle size={16} />
+                    <span>
+                        {isRefreshing
+                            ? 'Refreshing market prices…'
+                            : error || 'Showing cached market prices'}
+                    </span>
+                    <button type="button" className={styles.retryBtn} onClick={reload}>
+                        <RefreshCw size={14} />
+                        Retry
+                    </button>
+                </div>
+            )}
 
             {/* ════════════════════════════════════════
                 HEADER
@@ -384,4 +391,4 @@ const Markets = () => {
     );
 };
 
-export default Markets;
+export default React.memo(Markets);

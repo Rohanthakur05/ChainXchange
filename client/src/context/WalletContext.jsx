@@ -1,115 +1,113 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import api from '../utils/api';
+import { safeGet, DEFAULT_TIMEOUT_MS } from '../utils/safeRequest';
+import {
+    logRequestStart,
+    logRequestSuccess,
+    logRequestFailed,
+    logLoadingFinished,
+} from '../utils/requestLog';
 
-/**
- * WalletContext - Global state management for user wallet
- * 
- * Provides:
- * - Single source of truth for wallet balance
- * - Optimistic updates after trades
- * - Re-sync capability from server
- * - Holdings data cached per-coin
- */
+const LABEL = 'wallet';
+
 const WalletContext = createContext(null);
 
 export const WalletProvider = ({ children }) => {
     const [wallet, setWallet] = useState(0);
-    const [holdings, setHoldings] = useState({});  // { coinId: { quantity, averageBuyPrice, ... } }
+    const [holdings, setHoldings] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const mountedRef = useRef(true);
+    const syncIdRef = useRef(0);
 
-    // Fetch wallet and holdings from server
     const syncWallet = useCallback(async () => {
-        console.log('[WalletContext] Starting sync...');
-        try {
-            setError(null);
-            setLoading(true);
+        const syncId = ++syncIdRef.current;
+        logRequestStart(LABEL);
+        setError(null);
+        setLoading(true);
 
+        const safety = setTimeout(() => {
+            if (mountedRef.current && syncId === syncIdRef.current) {
+                setLoading(false);
+                logLoadingFinished(LABEL, { reason: 'safety-timeout' });
+            }
+        }, DEFAULT_TIMEOUT_MS + 500);
+
+        try {
             const [profileRes, portfolioRes] = await Promise.all([
-                api.get('/auth/profile'),
-                api.get('/crypto/portfolio').catch((err) => {
-                    console.warn('[WalletContext] Portfolio fetch failed:', err.message);
-                    return { data: { holdings: [] } };
-                })
+                safeGet(api, '/auth/profile', { timeoutMs: DEFAULT_TIMEOUT_MS, label: `${LABEL}/profile` }),
+                safeGet(api, '/crypto/portfolio', { timeoutMs: DEFAULT_TIMEOUT_MS, label: `${LABEL}/portfolio` }).catch(
+                    (err) => {
+                        logRequestFailed(`${LABEL}/portfolio`, err);
+                        return { data: { holdings: [] } };
+                    }
+                ),
             ]);
 
-            // Debug: Log the exact response structure
-            console.log('[WalletContext] Profile response:', profileRes.data);
-            console.log('[WalletContext] User object:', profileRes.data?.user);
-            console.log('[WalletContext] Wallet value:', profileRes.data?.user?.wallet);
+            if (!mountedRef.current || syncId !== syncIdRef.current) return;
 
-            // Extract wallet - ensure it's a number
             const walletValue = profileRes.data?.user?.wallet;
-            const parsedWallet = typeof walletValue === 'number' ? walletValue : Number(walletValue) || 0;
+            const parsedWallet =
+                typeof walletValue === 'number' ? walletValue : Number(walletValue) || 0;
 
-            console.log('[WalletContext] Setting wallet to:', parsedWallet);
             setWallet(parsedWallet);
 
-            // Convert holdings array to map for easy lookup
             const holdingsMap = {};
-            const holdingsArray = portfolioRes.data?.holdings || [];
-            holdingsArray.forEach(h => {
-                if (h.coinId) {
-                    holdingsMap[h.coinId] = h;
-                }
+            (portfolioRes.data?.holdings || []).forEach((h) => {
+                if (h.coinId) holdingsMap[h.coinId] = h;
             });
             setHoldings(holdingsMap);
-            console.log('[WalletContext] Sync complete. Wallet:', parsedWallet, 'Holdings:', Object.keys(holdingsMap).length);
+            logRequestSuccess(LABEL, {
+                wallet: parsedWallet,
+                holdings: Object.keys(holdingsMap).length,
+            });
         } catch (err) {
-            console.error('[WalletContext] Sync failed:', err);
-            console.error('[WalletContext] Error details:', err.response?.data);
-            setError(err.response?.data?.error || 'Failed to load wallet');
+            if (!mountedRef.current || syncId !== syncIdRef.current) return;
+            logRequestFailed(LABEL, err);
+            setError(err?.userMessage || err?.response?.data?.error || 'Failed to load wallet');
         } finally {
-            setLoading(false);
+            clearTimeout(safety);
+            if (mountedRef.current && syncId === syncIdRef.current) {
+                setLoading(false);
+                logLoadingFinished(LABEL);
+            }
         }
     }, []);
 
-    // Optimistic update after buy
     const executeBuy = useCallback((coinId, quantity, totalCost) => {
-        // Deduct from wallet
-        setWallet(prev => prev - totalCost);
-
-        // Add to holdings
-        setHoldings(prev => ({
+        setWallet((prev) => prev - totalCost);
+        setHoldings((prev) => ({
             ...prev,
             [coinId]: {
                 ...prev[coinId],
-                quantity: (prev[coinId]?.quantity || 0) + quantity
-            }
+                quantity: (prev[coinId]?.quantity || 0) + quantity,
+            },
         }));
     }, []);
 
-    // Optimistic update after sell
     const executeSell = useCallback((coinId, quantity, totalEarnings) => {
-        // Credit to wallet
-        setWallet(prev => prev + totalEarnings);
-
-        // Reduce holdings
-        setHoldings(prev => {
+        setWallet((prev) => prev + totalEarnings);
+        setHoldings((prev) => {
             const updated = { ...prev };
-            const current = updated[coinId]?.quantity || 0;
-            const remaining = current - quantity;
-
-            if (remaining <= 0) {
-                delete updated[coinId];
-            } else {
-                updated[coinId] = {
-                    ...updated[coinId],
-                    quantity: remaining
-                };
-            }
+            const remaining = (updated[coinId]?.quantity || 0) - quantity;
+            if (remaining <= 0) delete updated[coinId];
+            else updated[coinId] = { ...updated[coinId], quantity: remaining };
             return updated;
         });
     }, []);
 
-    // Get holdings for specific coin
-    const getCoinHoldings = useCallback((coinId) => {
-        return holdings[coinId] || null;
-    }, [holdings]);
+    const getCoinHoldings = useCallback(
+        (coinId) => holdings[coinId] || null,
+        [holdings]
+    );
 
-    // Initial sync on mount
     useEffect(() => {
+        mountedRef.current = true;
         syncWallet();
+        return () => {
+            mountedRef.current = false;
+            syncIdRef.current += 1;
+        };
     }, [syncWallet]);
 
     const value = {
@@ -120,17 +118,12 @@ export const WalletProvider = ({ children }) => {
         syncWallet,
         executeBuy,
         executeSell,
-        getCoinHoldings
+        getCoinHoldings,
     };
 
-    return (
-        <WalletContext.Provider value={value}>
-            {children}
-        </WalletContext.Provider>
-    );
+    return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 };
 
-// Custom hook for using wallet context
 export const useWallet = () => {
     const context = useContext(WalletContext);
     if (!context) {

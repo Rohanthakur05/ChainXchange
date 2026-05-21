@@ -1,5 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../utils/api';
+import { safeGet, DEFAULT_TIMEOUT_MS } from '../utils/safeRequest';
+import {
+    logRequestStart,
+    logRequestSuccess,
+    logRequestFailed,
+    logLoadingFinished,
+} from '../utils/requestLog';
+
+const LABEL = 'watchlist';
 
 const WatchlistContext = createContext(null);
 
@@ -7,70 +16,89 @@ export const WatchlistProvider = ({ children }) => {
     const [watchlists, setWatchlists] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const mountedRef = useRef(true);
+    const fetchIdRef = useRef(0);
 
-    // Fetch all watchlists on mount
     const fetchWatchlists = useCallback(async () => {
+        const fetchId = ++fetchIdRef.current;
+        logRequestStart(LABEL);
+        setLoading(true);
+
+        const safety = setTimeout(() => {
+            if (mountedRef.current && fetchId === fetchIdRef.current) {
+                setLoading(false);
+                logLoadingFinished(LABEL, { reason: 'safety-timeout' });
+            }
+        }, DEFAULT_TIMEOUT_MS + 500);
+
         try {
-            setLoading(true);
-            const response = await api.get('/watchlist');
+            const response = await safeGet(api, '/watchlist', {
+                timeoutMs: DEFAULT_TIMEOUT_MS,
+                label: LABEL,
+            });
+            if (!mountedRef.current || fetchId !== fetchIdRef.current) return;
+
             const data = response.data?.watchlists || response.data || [];
             setWatchlists(Array.isArray(data) ? data : []);
             setError(null);
+            logRequestSuccess(LABEL, { count: Array.isArray(data) ? data.length : 0 });
         } catch (err) {
-            console.error('Failed to fetch watchlists:', err);
-            setError(err.message);
-            // Don't clear watchlists on error to preserve cached data
+            if (!mountedRef.current || fetchId !== fetchIdRef.current) return;
+            logRequestFailed(LABEL, err);
+            setError(err.message || 'Failed to load watchlists');
         } finally {
-            setLoading(false);
+            clearTimeout(safety);
+            if (mountedRef.current && fetchId === fetchIdRef.current) {
+                setLoading(false);
+                logLoadingFinished(LABEL);
+            }
         }
     }, []);
 
     useEffect(() => {
+        mountedRef.current = true;
         fetchWatchlists();
+        return () => {
+            mountedRef.current = false;
+            fetchIdRef.current += 1;
+        };
     }, [fetchWatchlists]);
 
-    // Create a new watchlist
     const createWatchlist = useCallback(async (name, initialCoinId = null) => {
-        // Optimistic: create temp watchlist
         const tempId = `temp-${Date.now()}`;
         const optimisticWatchlist = {
             _id: tempId,
             name,
             coins: initialCoinId ? [initialCoinId] : [],
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
         };
 
-        setWatchlists(prev => [...prev, optimisticWatchlist]);
+        setWatchlists((prev) => [...prev, optimisticWatchlist]);
 
         try {
             const response = await api.post('/watchlist', { name });
             const newWatchlist = response.data?.watchlist || response.data;
 
-            // If there's an initial coin, add it
             if (initialCoinId && newWatchlist._id) {
                 await api.post(`/watchlist/${newWatchlist._id}/coins`, { coinId: initialCoinId });
                 newWatchlist.coins = [initialCoinId];
             }
 
-            // Replace temp with real
-            setWatchlists(prev =>
-                prev.map(w => w._id === tempId ? newWatchlist : w)
-            );
-
+            setWatchlists((prev) => prev.map((w) => (w._id === tempId ? newWatchlist : w)));
             return { success: true, watchlist: newWatchlist };
         } catch (err) {
-            // Rollback
-            setWatchlists(prev => prev.filter(w => w._id !== tempId));
+            setWatchlists((prev) => prev.filter((w) => w._id !== tempId));
             console.error('Failed to create watchlist:', err);
-            return { success: false, error: err.response?.data?.message || 'Failed to create watchlist' };
+            return {
+                success: false,
+                error: err.response?.data?.message || 'Failed to create watchlist',
+            };
         }
     }, []);
 
-    // Add coin to a watchlist
     const addCoinToWatchlist = useCallback(async (watchlistId, coinId) => {
-        // Optimistic update
-        setWatchlists(prev =>
-            prev.map(w => {
+        setWatchlists((prev) =>
+            prev.map((w) => {
                 if (w._id === watchlistId && !w.coins.includes(coinId)) {
                     return { ...w, coins: [...w.coins, coinId] };
                 }
@@ -82,30 +110,25 @@ export const WatchlistProvider = ({ children }) => {
             await api.post(`/watchlist/${watchlistId}/coins`, { coinId });
             return { success: true };
         } catch (err) {
-            // Rollback
-            setWatchlists(prev =>
-                prev.map(w => {
+            setWatchlists((prev) =>
+                prev.map((w) => {
                     if (w._id === watchlistId) {
-                        return { ...w, coins: w.coins.filter(c => c !== coinId) };
+                        return { ...w, coins: w.coins.filter((c) => c !== coinId) };
                     }
                     return w;
                 })
             );
-            console.error('Failed to add coin:', err);
             return { success: false, error: err.response?.data?.message || 'Failed to add coin' };
         }
     }, []);
 
-    // Remove coin from a watchlist
     const removeCoinFromWatchlist = useCallback(async (watchlistId, coinId) => {
-        // Store original for rollback
         const originalWatchlists = watchlists;
 
-        // Optimistic update
-        setWatchlists(prev =>
-            prev.map(w => {
+        setWatchlists((prev) =>
+            prev.map((w) => {
                 if (w._id === watchlistId) {
-                    return { ...w, coins: w.coins.filter(c => c !== coinId) };
+                    return { ...w, coins: w.coins.filter((c) => c !== coinId) };
                 }
                 return w;
             })
@@ -115,59 +138,55 @@ export const WatchlistProvider = ({ children }) => {
             await api.delete(`/watchlist/${watchlistId}/coins/${coinId}`);
             return { success: true };
         } catch (err) {
-            // Rollback
             setWatchlists(originalWatchlists);
-            console.error('Failed to remove coin:', err);
             return { success: false, error: err.response?.data?.message || 'Failed to remove coin' };
         }
     }, [watchlists]);
 
-    // Delete a watchlist
     const deleteWatchlist = useCallback(async (watchlistId) => {
         const originalWatchlists = watchlists;
-
-        setWatchlists(prev => prev.filter(w => w._id !== watchlistId));
+        setWatchlists((prev) => prev.filter((w) => w._id !== watchlistId));
 
         try {
             await api.delete(`/watchlist/${watchlistId}`);
             return { success: true };
         } catch (err) {
             setWatchlists(originalWatchlists);
-            console.error('Failed to delete watchlist:', err);
             return { success: false, error: err.response?.data?.message || 'Failed to delete watchlist' };
         }
     }, [watchlists]);
 
-    // Check if a coin is in a specific watchlist
-    const isCoinInWatchlist = useCallback((coinId, watchlistId = null) => {
-        if (watchlistId) {
-            const watchlist = watchlists.find(w => w._id === watchlistId);
-            return watchlist?.coins?.includes(coinId) || false;
-        }
-        // Check if coin is in ANY watchlist
-        return watchlists.some(w => w.coins?.includes(coinId));
-    }, [watchlists]);
+    const isCoinInWatchlist = useCallback(
+        (coinId, watchlistId = null) => {
+            if (watchlistId) {
+                const watchlist = watchlists.find((w) => w._id === watchlistId);
+                return watchlist?.coins?.includes(coinId) || false;
+            }
+            return watchlists.some((w) => w.coins?.includes(coinId));
+        },
+        [watchlists]
+    );
 
-    // Get all watchlists that contain a specific coin
-    const getCoinWatchlists = useCallback((coinId) => {
-        return watchlists.filter(w => w.coins?.includes(coinId));
-    }, [watchlists]);
-
-    const value = {
-        watchlists,
-        loading,
-        error,
-        fetchWatchlists,
-        createWatchlist,
-        addCoinToWatchlist,
-        removeCoinFromWatchlist,
-        deleteWatchlist,
-        isCoinInWatchlist,
-        getCoinWatchlists
-    };
+    const getCoinWatchlists = useCallback(
+        (coinId) => watchlists.filter((w) => w.coins?.includes(coinId)),
+        [watchlists]
+    );
 
     return (
-        <WatchlistContext.Provider value={value}>
+        <WatchlistContext.Provider
+            value={{
+                watchlists,
+                loading,
+                error,
+                fetchWatchlists,
+                createWatchlist,
+                addCoinToWatchlist,
+                removeCoinFromWatchlist,
+                deleteWatchlist,
+                isCoinInWatchlist,
+                getCoinWatchlists,
+            }}
+        >
             {children}
         </WatchlistContext.Provider>
     );

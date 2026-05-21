@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import api from '../utils/api';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { fetchMarkets, getCachedMarkets } from '../services/marketService';
+import { logLoadingFinished } from '../utils/requestLog';
 
+const LABEL = 'global-search';
 const GlobalSearchContext = createContext(null);
 
 export const useGlobalSearch = () => {
@@ -12,15 +14,12 @@ export const useGlobalSearch = () => {
 };
 
 export const GlobalSearchProvider = ({ children }) => {
-    // Modal state
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [coins, setCoins] = useState(() => getCachedMarkets());
+    const [loading, setLoading] = useState(false);
+    const mountedRef = useRef(true);
 
-    // Data state
-    const [coins, setCoins] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    // Define these BEFORE any useEffect that uses them (fixes TDZ error)
     const openSearch = useCallback(() => {
         setIsSearchOpen(true);
         setSearchQuery('');
@@ -31,23 +30,36 @@ export const GlobalSearchProvider = ({ children }) => {
         setSearchQuery('');
     }, []);
 
-    // Fetch coins data once on mount
     useEffect(() => {
-        const fetchCoins = async () => {
+        mountedRef.current = true;
+        let cancelled = false;
+
+        const refresh = async () => {
             try {
-                const response = await api.get('/crypto');
-                const data = Array.isArray(response.data) ? response.data : response.data.coins || [];
-                setCoins(data);
+                const result = await fetchMarkets();
+                if (!cancelled && mountedRef.current) {
+                    setCoins(result.coins?.length ? result.coins : getCachedMarkets());
+                }
             } catch (err) {
-                console.error('Failed to fetch coins for search', err);
+                if (!cancelled && mountedRef.current) {
+                    setCoins(getCachedMarkets());
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled && mountedRef.current) {
+                    setLoading(false);
+                    logLoadingFinished(LABEL);
+                }
             }
         };
-        fetchCoins();
+
+        refresh();
+
+        return () => {
+            cancelled = true;
+            mountedRef.current = false;
+        };
     }, []);
 
-    // Lock body scroll when modal is open
     useEffect(() => {
         if (isSearchOpen) {
             document.body.style.overflow = 'hidden';
@@ -59,19 +71,15 @@ export const GlobalSearchProvider = ({ children }) => {
         };
     }, [isSearchOpen]);
 
-    // Note: Hotkey '/' is now handled by KeyboardShortcutContext for centralized management
-
-    // Filter coins based on search query
     const searchResults = useMemo(() => {
         if (!searchQuery.trim()) {
-            // Return top 8 coins when query is empty (popular assets)
             return coins.slice(0, 8);
         }
-
         const query = searchQuery.toLowerCase().trim();
-        return coins.filter(coin =>
-            coin.name.toLowerCase().includes(query) ||
-            coin.symbol.toLowerCase().includes(query)
+        return coins.filter(
+            (coin) =>
+                coin.name.toLowerCase().includes(query) ||
+                coin.symbol.toLowerCase().includes(query)
         );
     }, [coins, searchQuery]);
 
@@ -83,13 +91,11 @@ export const GlobalSearchProvider = ({ children }) => {
         setSearchQuery,
         searchResults,
         loading,
-        coins
+        coins,
     };
 
     return (
-        <GlobalSearchContext.Provider value={value}>
-            {children}
-        </GlobalSearchContext.Provider>
+        <GlobalSearchContext.Provider value={value}>{children}</GlobalSearchContext.Provider>
     );
 };
 

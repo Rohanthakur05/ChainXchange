@@ -1,7 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Wallet, Plus } from 'lucide-react';
+import { ArrowLeft, Wallet, Plus, RefreshCw } from 'lucide-react';
 import api from '../utils/api';
+import { safeGet, DEFAULT_TIMEOUT_MS } from '../utils/safeRequest';
+import { fetchMarkets, findCoinById } from '../services/marketService';
+import { logRequestStart, logRequestSuccess, logRequestFailed, logLoadingFinished } from '../utils/requestLog';
 import { useWallet } from '../context/WalletContext';
 import TradingViewChart from '../components/charts/TradingViewChart';
 import ChartToolbar from '../components/charts/ChartToolbar/ChartToolbar';
@@ -77,29 +80,62 @@ const Terminal = () => {
         setActiveIndicators(prev => prev.filter(id => id !== indicatorId));
     }, []);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // Fetch coin data
-                const coinResponse = await api.get('/crypto');
-                const coins = Array.isArray(coinResponse.data)
-                    ? coinResponse.data
-                    : coinResponse.data.coins || [];
-                const foundCoin = coins.find(c => c.id === id);
-                setCoin(foundCoin);
+    const mountedRef = useRef(true);
 
-                // Holdings for this specific coin
-                const portfolioResponse = await api.get('/crypto/portfolio');
-                const userHolding = portfolioResponse.data?.holdings?.find(h => h.coinId === id);
-                setHoldings(userHolding || null);
-            } catch (err) {
-                console.error('Failed to load terminal data', err);
-            } finally {
+    const loadTerminal = useCallback(async () => {
+        if (!id) return;
+        const label = 'terminal';
+        logRequestStart(label, { coinId: id });
+        setLoading(true);
+        setCoin(findCoinById(id));
+
+        const safety = setTimeout(() => {
+            if (mountedRef.current) {
                 setLoading(false);
+                logLoadingFinished(label, { reason: 'safety-timeout' });
             }
-        };
-        fetchData();
+        }, DEFAULT_TIMEOUT_MS + 500);
+
+        try {
+            const [marketResult, portfolioRes] = await Promise.all([
+                fetchMarkets(),
+                safeGet(api, '/crypto/portfolio', { timeoutMs: DEFAULT_TIMEOUT_MS, label: `${label}/portfolio` }).catch(
+                    (err) => {
+                        logRequestFailed(`${label}/portfolio`, err);
+                        return { data: { holdings: [] } };
+                    }
+                ),
+            ]);
+
+            if (!mountedRef.current) return;
+
+            const foundCoin =
+                marketResult.coins?.find((c) => c.id === id) || findCoinById(id);
+            setCoin(foundCoin || null);
+
+            const userHolding = portfolioRes.data?.holdings?.find((h) => h.coinId === id);
+            setHoldings(userHolding || null);
+            logRequestSuccess(label, { coin: foundCoin?.id });
+        } catch (err) {
+            if (!mountedRef.current) return;
+            logRequestFailed(label, err);
+            setCoin(findCoinById(id));
+        } finally {
+            clearTimeout(safety);
+            if (mountedRef.current) {
+                setLoading(false);
+                logLoadingFinished(label);
+            }
+        }
     }, [id]);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        loadTerminal();
+        return () => {
+            mountedRef.current = false;
+        };
+    }, [loadTerminal]);
 
     const handleTrade = async (e) => {
         e.preventDefault();
@@ -144,7 +180,8 @@ const Terminal = () => {
         return (
             <div className={styles.terminal}>
                 <div className={styles.error}>
-                    <p>Asset not found</p>
+                    <p>Asset not found or market data unavailable</p>
+                    <Button onClick={loadTerminal}><RefreshCw size={14} /> Retry</Button>
                     <Button onClick={() => navigate('/markets')}>Back to Markets</Button>
                 </div>
             </div>

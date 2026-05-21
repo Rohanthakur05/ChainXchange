@@ -121,9 +121,10 @@ const Topbar = ({ onLogout }) => {
         }
     };
 
-    const formattedBalance = walletLoading
-        ? 'Loading...'
-        : `$${wallet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formattedBalance = `$${wallet.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
 
     const userInitial = user?.username ? user.username.charAt(0).toUpperCase() : <User size={18} />;
 

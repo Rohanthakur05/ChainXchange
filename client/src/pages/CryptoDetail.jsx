@@ -1,8 +1,14 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LineChart, CandlestickChart, Bell, SlidersHorizontal, Maximize2, Star, ArrowUpRight, ArrowDownRight, ChevronLeft } from 'lucide-react';
+import {
+    LineChart, CandlestickChart, Bell, SlidersHorizontal, Maximize2, Star,
+    ArrowUpRight, ArrowDownRight, ChevronLeft, RefreshCw, AlertCircle,
+} from 'lucide-react';
 import api from '../utils/api';
+import { safeGet, DEFAULT_TIMEOUT_MS } from '../utils/safeRequest';
+import { findCoinById } from '../services/marketService';
+import { logRequestStart, logRequestSuccess, logRequestFailed, logLoadingFinished } from '../utils/requestLog';
 import { useWallet } from '../context/WalletContext';
 import { useKeyboardShortcuts } from '../context/KeyboardShortcutContext';
 import { useToast } from '../components/ui/Toast';
@@ -96,6 +102,7 @@ const CryptoDetail = () => {
     const toast = useToast();
 
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(null);
     const [orderPreview, setOrderPreview] = useState(null);
     const [confirmModalError, setConfirmModalError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -151,14 +158,64 @@ const CryptoDetail = () => {
         }
     };
 
-    useEffect(() => {
+    const mountedRef = React.useRef(true);
+
+    const loadCoin = React.useCallback(async () => {
         if (!id) return;
+        const label = 'crypto-detail';
+        logRequestStart(label, { coinId: id });
         setLoading(true);
-        api.get(`/crypto/detail/${id}`)
-            .then(r => setCoin(r.data.coin))
-            .catch(err => console.error('Error fetching coin data', err))
-            .finally(() => setLoading(false));
-    }, [id]);
+        setLoadError(null);
+        setCoin(findCoinById(id));
+
+        const safety = setTimeout(() => {
+            if (mountedRef.current) {
+                setLoading(false);
+                logLoadingFinished(label, { reason: 'safety-timeout' });
+            }
+        }, DEFAULT_TIMEOUT_MS + 500);
+
+        try {
+            const r = await safeGet(api, `/crypto/detail/${id}`, {
+                timeoutMs: DEFAULT_TIMEOUT_MS,
+                label,
+            });
+            if (!mountedRef.current) return;
+            if (r.data?.coin) {
+                setCoin(r.data.coin);
+                logRequestSuccess(label, { coinId: id });
+            } else {
+                const fallback = findCoinById(id);
+                if (fallback) setCoin(fallback);
+                else setLoadError('Coin data unavailable');
+            }
+        } catch (err) {
+            if (!mountedRef.current) return;
+            logRequestFailed(label, err);
+            const fallback = findCoinById(id);
+            if (fallback) {
+                setCoin(fallback);
+                toast.warning('Using cached price', 'Live coin details are temporarily unavailable.');
+            } else {
+                setLoadError(err.userMessage || err.message || 'Failed to load coin');
+                toast.error('Market data error', err.userMessage || 'Could not load coin details');
+            }
+        } finally {
+            clearTimeout(safety);
+            if (mountedRef.current) {
+                setLoading(false);
+                logLoadingFinished(label);
+            }
+        }
+    }, [id, toast]);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        loadCoin();
+        return () => {
+            mountedRef.current = false;
+        };
+    }, [loadCoin]);
 
     useEffect(() => { if (id) loadChartData(timeframe); }, [timeframe, id]);
 
@@ -289,12 +346,30 @@ const CryptoDetail = () => {
 
     const isPositive = coin ? (coin.price_change_percentage_24h || 0) >= 0 : true;
 
-    if (!coin) return (
-        <div className={styles.loadingScreen}>
-            <div className={styles.spinner} />
-            <span>Loading market data...</span>
-        </div>
-    );
+    if (loading) {
+        return (
+            <div className={styles.loadingScreen}>
+                <div className={styles.spinner} />
+                <span>Loading market data...</span>
+            </div>
+        );
+    }
+
+    if (!coin) {
+        return (
+            <div className={styles.loadingScreen}>
+                <AlertCircle size={32} className={styles.errorIcon} />
+                <p>{loadError || 'Unable to load this asset'}</p>
+                <button type="button" className={styles.retryBtn} onClick={loadCoin}>
+                    <RefreshCw size={14} />
+                    Retry
+                </button>
+                <button type="button" className={styles.backLink} onClick={() => navigate('/markets')}>
+                    Back to Markets
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.container}>

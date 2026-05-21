@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../../utils/api';
+import { safeGet, DEFAULT_TIMEOUT_MS } from '../../utils/safeRequest';
+import { fetchMarkets } from '../../services/marketService';
+import { logRequestStart, logLoadingFinished } from '../../utils/requestLog';
 import Badge from '../ui/Badge/Badge';
 import styles from './WatchlistWidget.module.css';
 
@@ -9,82 +12,106 @@ const WatchlistWidget = () => {
     const [watchlist, setWatchlist] = useState([]);
     const [marketData, setMarketData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const mountedRef = useRef(true);
 
     useEffect(() => {
+        mountedRef.current = true;
+        const label = 'watchlist-widget';
+
         const fetchData = async () => {
+            logRequestStart(label);
+            const safety = setTimeout(() => {
+                if (mountedRef.current) {
+                    setLoading(false);
+                    logLoadingFinished(label, { reason: 'safety-timeout' });
+                }
+            }, DEFAULT_TIMEOUT_MS + 500);
+
             try {
-                // 1. Get User Profile for Watchlist IDs
-                const profileRes = await api.get('/auth/profile');
+                const profileRes = await safeGet(api, '/auth/profile', {
+                    timeoutMs: DEFAULT_TIMEOUT_MS,
+                    label: `${label}/profile`,
+                });
                 const userWatchlist = profileRes.data.user?.watchlist || [];
+                if (!mountedRef.current) return;
                 setWatchlist(userWatchlist);
 
                 if (userWatchlist.length > 0) {
-                    // 2. Get Market Data (Top 100 is usually cached/fast)
-                    // Optimization: We could add a specific endpoint for filtered list, 
-                    // but reusing /crypto is fine for < 100 items.
-                    const marketRes = await api.get('/crypto');
-                    const allCoins = Array.isArray(marketRes.data) ? marketRes.data : marketRes.data.coins || [];
-
-                    // Filter coins that are in watchlist
-                    const watchedCoins = allCoins.filter(c => userWatchlist.includes(c.id));
-                    setMarketData(watchedCoins);
+                    const { coins: allCoins } = await fetchMarkets();
+                    if (!mountedRef.current) return;
+                    setMarketData(allCoins.filter((c) => userWatchlist.includes(c.id)));
                 }
             } catch (err) {
-                console.error('Failed to load watchlist', err);
+                console.warn('[ChainXchange] watchlist-widget — request failed', err.message);
             } finally {
-                setLoading(false);
+                clearTimeout(safety);
+                if (mountedRef.current) {
+                    setLoading(false);
+                    logLoadingFinished(label);
+                }
             }
         };
 
         fetchData();
+        return () => {
+            mountedRef.current = false;
+        };
     }, []);
 
-    if (loading) return <div className={styles.widget}><div className={styles.loading}>Loading watchlist...</div></div>;
+    if (loading) {
+        return (
+            <div className={styles.widget}>
+                <div className={styles.loading}>Loading watchlist…</div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.widget}>
             <div className={styles.header}>
-                <div className={styles.titleWrapper}>
-                    <Star size={18} className={styles.icon} />
-                    <h3>Your Watchlist</h3>
-                </div>
-                <Link to="/markets?filter=watchlist" className={styles.link}>
+                <Star size={16} className={styles.icon} />
+                <h3>My Watchlist</h3>
+                <Link to="/markets" className={styles.viewAll}>
                     View All <ArrowRight size={14} />
                 </Link>
             </div>
 
             {watchlist.length === 0 ? (
-                <div className={styles.empty}>
-                    <p>No assets watched yet.</p>
-                    <Link to="/markets" className={styles.emptyLink}>Discover Assets</Link>
-                </div>
+                <p className={styles.empty}>No coins in watchlist yet.</p>
             ) : (
                 <div className={styles.list}>
-                    {marketData.map(coin => (
-                        <Link to={`/markets/${coin.id}`} key={coin.id} className={styles.item}>
-                            <div className={styles.colName}>
-                                <img src={coin.image} alt={coin.name} className={styles.coinIcon} />
-                                <div>
-                                    <span className={styles.symbol}>{coin.symbol.toUpperCase()}</span>
-                                    <span className={styles.name}>{coin.name}</span>
-                                </div>
+                    {marketData.map((coin) => (
+                        <Link key={coin.id} to={`/markets/${coin.id}`} className={styles.item}>
+                            <img src={coin.image} alt={coin.name} className={styles.coinIcon} />
+                            <div className={styles.info}>
+                                <span className={styles.name}>{coin.name}</span>
+                                <span className={styles.symbol}>{coin.symbol?.toUpperCase()}</span>
                             </div>
-                            <div className={styles.colPrice}>
-                                <span className={styles.price}>${coin.current_price?.toLocaleString()}</span>
-                            </div>
-                            <div className={styles.colChange}>
-                                <Badge variant={coin.price_change_percentage_24h >= 0 ? 'success' : 'danger'} size="sm">
-                                    {coin.price_change_percentage_24h >= 0 ? '+' : ''}
-                                    {coin.price_change_percentage_24h?.toFixed(2)}%
+                            <div className={styles.priceInfo}>
+                                <span className={styles.price}>
+                                    ${coin.current_price?.toLocaleString()}
+                                </span>
+                                <Badge
+                                    variant={
+                                        (coin.price_change_percentage_24h || 0) >= 0
+                                            ? 'success'
+                                            : 'danger'
+                                    }
+                                >
+                                    {(coin.price_change_percentage_24h || 0) >= 0 ? (
+                                        <TrendingUp size={12} />
+                                    ) : (
+                                        <TrendingDown size={12} />
+                                    )}
+                                    {Math.abs(coin.price_change_percentage_24h || 0).toFixed(2)}%
                                 </Badge>
                             </div>
                         </Link>
                     ))}
-                    {/* Handle case where IDs exist but market data missing (e.g. not in top 100) */}
                     {marketData.length < watchlist.length && (
-                        <div className={styles.hiddenCount}>
+                        <p className={styles.more}>
                             + {watchlist.length - marketData.length} other assets (view in Markets)
-                        </div>
+                        </p>
                     )}
                 </div>
             )}
@@ -92,4 +119,4 @@ const WatchlistWidget = () => {
     );
 };
 
-export default WatchlistWidget;
+export default React.memo(WatchlistWidget);
