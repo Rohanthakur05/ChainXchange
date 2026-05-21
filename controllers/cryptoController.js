@@ -1,7 +1,8 @@
 const User = require('../models/User');
 const Portfolio = require('../models/Portfolio');
 const Transaction = require('../models/Transaction');
-const { fetchCoinGeckoDataWithCache } = require('../utils/geckoApi');
+const { fetchCoinGeckoDataWithCache, peekCoinGeckoCache } = require('../utils/geckoApi');
+const { FALLBACK_MARKETS } = require('../utils/marketFallback');
 const { redisClient } = require('../utils/redisClient'); // Import the shared client
 
 // Cache for portfolio data. TTL of 120 seconds (2 minutes)
@@ -88,70 +89,51 @@ class CryptoController {
      * Get cryptocurrency markets
      */
     static async getMarkets(req, res) {
+        const cacheKey = 'crypto-markets';
+        const MARKETS_URL =
+            'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&locale=en';
+
+        const respondFallback = (message) => {
+            res.setHeader?.('Cache-Control', 'public, max-age=30');
+            return res.json({
+                coins: FALLBACK_MARKETS,
+                isFallback: true,
+                message,
+            });
+        };
+
+        const cached = peekCoinGeckoCache(cacheKey);
+        if (cached?.length) {
+            res.setHeader?.('Cache-Control', 'public, max-age=60');
+            return res.json(cached);
+        }
+
         try {
-            console.log('Fetching market data...'); // Debug log
             const coins = await Promise.race([
-                fetchCoinGeckoDataWithCache(
-                    'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&locale=en',
-                    null,
-                    'crypto-markets',
-                    5 * 60 * 1000
-                ),
+                fetchCoinGeckoDataWithCache(MARKETS_URL, null, cacheKey, 5 * 60 * 1000),
                 new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Request timeout')), 30000)
-                )
+                    setTimeout(() => reject(new Error('Request timeout')), 8000)
+                ),
             ]);
 
-            // If no coins received, use fallback data
             if (!coins || coins.length === 0) {
-                console.error('No coins received from CoinGecko, using fallback data');
-                // Fallback data for testing
-                const fallbackCoins = [
-                    {
-                        id: "bitcoin",
-                        symbol: "btc",
-                        name: "Bitcoin",
-                        current_price: 45000,
-                    },
-                    {
-                        id: "ethereum",
-                        symbol: "eth",
-                        name: "Ethereum",
-                        current_price: 3000,
-                    }
-                ];
-
-                return res.json({
-                    coins: fallbackCoins,
-                    isFallback: true,
-                    message: 'Using fallback data'
-                });
+                return respondFallback('Using fallback data — empty provider response');
             }
 
-            res.json(coins);
+            res.setHeader?.('Cache-Control', 'public, max-age=60');
+            return res.json(coins);
         } catch (error) {
-            console.error('Markets error:', error);
-            // Render with fallback data instead of error page
-            const fallbackCoins = [
-                {
-                    id: "bitcoin",
-                    symbol: "btc",
-                    name: "Bitcoin",
-                    current_price: 45000,
-                },
-                {
-                    id: "ethereum",
-                    symbol: "eth",
-                    name: "Ethereum",
-                    current_price: 3000,
-                }
-            ];
+            console.error('Markets error:', error.message);
 
-            res.json({
-                coins: fallbackCoins,
-                error: 'Using fallback data - live prices temporarily unavailable',
-                isFallback: true
-            });
+            const stale = peekCoinGeckoCache(cacheKey);
+            if (stale?.length) {
+                res.setHeader?.('Cache-Control', 'public, max-age=30');
+                return res.json(stale);
+            }
+
+            return respondFallback(
+                'Using fallback data — live prices temporarily unavailable'
+            );
         }
     }
 

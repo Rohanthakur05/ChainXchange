@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Grid, TrendingUp, TrendingDown, Filter } from 'lucide-react';
 import { transformToHeatmap, filterByMarketCap, sortHeatmapData, getHeatmapColor, formatCompact } from '../../services/heatmapService';
@@ -12,6 +12,16 @@ const MarketHeatmap = ({ coins = [], loading = false }) => {
     const [filter, setFilter] = useState('all');
     const [sortBy, setSortBy] = useState('marketCap');
     const [hoveredCoin, setHoveredCoin] = useState(null);
+    const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+
+    useEffect(() => {
+        if (!loading) {
+            setLoadingTimedOut(false);
+            return undefined;
+        }
+        const t = setTimeout(() => setLoadingTimedOut(true), 8000);
+        return () => clearTimeout(t);
+    }, [loading]);
 
     // Transform and filter data
     const heatmapData = useMemo(() => {
@@ -20,7 +30,7 @@ const MarketHeatmap = ({ coins = [], loading = false }) => {
         return sortHeatmapData(filtered, sortBy);
     }, [coins, filter, sortBy]);
 
-    if (loading) {
+    if (loading && !loadingTimedOut && coins.length === 0) {
         return (
             <div className={styles.container}>
                 <div className={styles.header}>
@@ -28,7 +38,7 @@ const MarketHeatmap = ({ coins = [], loading = false }) => {
                 </div>
                 <div className={styles.loading}>
                     <div className={styles.spinner} />
-                    <p>Loading market data...</p>
+                    <p>Loading heatmap…</p>
                 </div>
             </div>
         );
@@ -150,4 +160,4 @@ const MarketHeatmap = ({ coins = [], loading = false }) => {
     );
 };
 
-export default MarketHeatmap;
+export default React.memo(MarketHeatmap);

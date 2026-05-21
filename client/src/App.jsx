@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import api from './utils/api';
+import { prefetchMarkets } from './services/marketService';
 import DashboardLayout from './layouts/DashboardLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { WalletProvider } from './context/WalletContext';
@@ -49,6 +50,7 @@ function App() {
             const response = await api.get('/auth/profile');
             setUser(response.data.user);
             setAuthState(AuthState.AUTHENTICATED);
+            prefetchMarkets();
         } catch (err) {
             if (err.response?.status === 401) {
                 // Explicitly not logged in - this is expected
