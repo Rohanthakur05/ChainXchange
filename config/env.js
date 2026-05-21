@@ -27,11 +27,15 @@ const config = {
   cookieSecret: process.env.COOKIE_SECRET || 'chainxchange-cookie-secret',
   sessionSecret: process.env.SESSION_SECRET || 'chainxchange-session-secret',
 
-  clientUrl: parseOrigins(process.env.CLIENT_URL, [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:8000'
-  ]),
+  clientUrl: parseOrigins(
+    process.env.CLIENT_URL,
+    isProduction
+      ? ['https://chain-xchange-seven.vercel.app']
+      : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:8000']
+  ),
+
+  // Cross-origin SPA (Vercel) + API (Render) requires SameSite=None + Secure
+  cookieSameSite: process.env.COOKIE_SAMESITE || (isProduction ? 'none' : 'lax'),
 
   // Secure cookies only when explicitly enabled or on HTTPS production
   cookieSecure:

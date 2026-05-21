@@ -688,6 +688,69 @@ class CryptoController {
             });
         }
     }
+
+    /**
+     * GET /crypto/search?q= — CoinGecko search proxy (avoids browser CORS)
+     */
+    static async searchCoins(req, res) {
+        const q = (req.query.q || '').trim();
+        if (!q) return res.json({ coins: [] });
+
+        try {
+            const data = await fetchCoinGeckoDataWithCache(
+                `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`,
+                null,
+                `search-${q.toLowerCase().slice(0, 40)}`,
+                5 * 60 * 1000
+            );
+            return res.json({ coins: data?.coins || [] });
+        } catch (error) {
+            console.error('Coin search error:', error.message);
+            return res.json({ coins: [] });
+        }
+    }
+
+    /**
+     * GET /crypto/markets-by-ids?ids=bitcoin,ethereum — markets for compare view
+     */
+    static async getMarketsByIds(req, res) {
+        const ids = (req.query.ids || '').trim();
+        if (!ids) return res.json([]);
+
+        try {
+            const coins = await fetchCoinGeckoDataWithCache(
+                `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=false&price_change_percentage=24h,7d`,
+                null,
+                `markets-ids-${ids.slice(0, 80)}`,
+                60 * 1000
+            );
+            return res.json(coins || []);
+        } catch (error) {
+            console.error('Markets-by-ids error:', error.message);
+            return res.json([]);
+        }
+    }
+
+    /**
+     * GET /crypto/simple-prices?ids=bitcoin,ethereum — lightweight price map for alerts
+     */
+    static async getSimplePrices(req, res) {
+        const ids = (req.query.ids || '').trim();
+        if (!ids) return res.json({});
+
+        try {
+            const data = await fetchCoinGeckoDataWithCache(
+                `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
+                null,
+                `simple-price-${ids.slice(0, 80)}`,
+                30 * 1000
+            );
+            return res.json(data || {});
+        } catch (error) {
+            console.error('Simple prices error:', error.message);
+            return res.json({});
+        }
+    }
 }
 
 module.exports = CryptoController;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Plus } from 'lucide-react';
 import { useCompare } from '../../context/CompareContext';
+import api from '../../utils/api';
 import styles from './CoinSelector.module.css';
 
 /**
@@ -39,13 +40,12 @@ const CoinSelector = ({ onClose }) => {
         debounceRef.current = setTimeout(async () => {
             setLoading(true);
             try {
-                const response = await fetch(
-                    `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`
-                );
-                const data = await response.json();
+                const response = await api.get('/crypto/search', {
+                    params: { q: query },
+                });
 
                 // Filter to top 10 results, exclude already selected
-                const filtered = (data.coins || [])
+                const filtered = (response.data?.coins || [])
                     .filter(c => !selectedCoinIds.includes(c.id))
                     .slice(0, 10);
 

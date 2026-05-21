@@ -125,7 +125,9 @@ function App() {
                         {error}
                     </p>
                     <p style={{ color: '#6E7681', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                        Make sure the backend server is running on port 8000.
+                        {import.meta.env.VITE_API_URL
+                            ? `Cannot reach the API at ${import.meta.env.VITE_API_URL}. Check that Render is running and CORS allows this site.`
+                            : 'VITE_API_URL is not set. Add it in Vercel (e.g. https://chainxchange-api.onrender.com) and redeploy.'}
                     </p>
                     <button
                         onClick={checkAuth}

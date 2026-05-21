@@ -38,7 +38,7 @@ router.post('/', auth, async (req, res) => {
         }
 
         const alert = new Alert({
-            userId: req.user.id,
+            userId: req.user._id,
             coinId,
             coinSymbol: coinSymbol.toUpperCase(),
             coinName: coinName || coinSymbol,
@@ -66,7 +66,7 @@ router.get('/', auth, async (req, res) => {
     try {
         const { status, coinId } = req.query;
 
-        const query = { userId: req.user.id };
+        const query = { userId: req.user._id };
         if (status) query.status = status;
         if (coinId) query.coinId = coinId;
 
@@ -87,7 +87,7 @@ router.get('/', auth, async (req, res) => {
 router.get('/count', auth, async (req, res) => {
     try {
         const count = await Alert.countDocuments({
-            userId: req.user.id,
+            userId: req.user._id,
             status: 'active'
         });
         res.json({ count });
@@ -104,7 +104,7 @@ router.put('/:id', auth, async (req, res) => {
     try {
         const alert = await Alert.findOne({
             _id: req.params.id,
-            userId: req.user.id
+            userId: req.user._id
         });
 
         if (!alert) {
@@ -134,7 +134,7 @@ router.delete('/:id', auth, async (req, res) => {
     try {
         const alert = await Alert.findOneAndDelete({
             _id: req.params.id,
-            userId: req.user.id
+            userId: req.user._id
         });
 
         if (!alert) {
@@ -154,7 +154,7 @@ router.delete('/:id', auth, async (req, res) => {
 router.get('/triggered', auth, async (req, res) => {
     try {
         const alerts = await Alert.find({
-            userId: req.user.id,
+            userId: req.user._id,
             status: 'triggered',
             notificationSent: false
         }).sort({ triggeredAt: -1 }).limit(10);

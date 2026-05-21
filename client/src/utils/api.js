@@ -1,12 +1,19 @@
 import axios from 'axios';
 import { classifyError, parseError, logError } from './errors';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+/** Backend base URL — required in production (Vercel: VITE_API_URL) */
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+if (import.meta.env.PROD && !API_BASE_URL) {
+    console.error(
+        '[ChainXchange] VITE_API_URL is not set. Set it to your Render API URL (e.g. https://chainxchange-api.onrender.com).'
+    );
+}
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    withCredentials: true, // Send cookies
-    timeout: 10000, // 10 second timeout
+    withCredentials: true,
+    timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -15,11 +22,9 @@ const api = axios.create({
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Classify and parse the error using centralized system
         const errorCode = classifyError(error);
         const parsed = parseError(error);
 
-        // Attach structured error info for easy consumption
         error.errorCode = errorCode;
         error.parsed = parsed;
         error.userMessage = parsed.message;
@@ -27,7 +32,6 @@ api.interceptors.response.use(
         error.suggestion = parsed.suggestion;
         error.severity = parsed.severity;
 
-        // Log for debugging (silent)
         logError(error);
 
         return Promise.reject(error);
@@ -35,4 +39,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-

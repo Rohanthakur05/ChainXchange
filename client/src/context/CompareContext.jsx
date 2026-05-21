@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import api from '../utils/api';
 
 const CompareContext = createContext(null);
 
@@ -53,15 +54,11 @@ export const CompareProvider = ({ children }) => {
             setError(null);
 
             try {
-                const response = await fetch(
-                    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${selectedCoinIds.join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=24h,7d`
-                );
+                const response = await api.get('/crypto/markets-by-ids', {
+                    params: { ids: selectedCoinIds.join(',') },
+                });
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch coin data');
-                }
-
-                const data = await response.json();
+                const data = Array.isArray(response.data) ? response.data : [];
 
                 const dataMap = {};
                 data.forEach(coin => {

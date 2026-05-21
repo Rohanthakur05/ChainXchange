@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Newspaper, ExternalLink, RefreshCw, Clock, AlertCircle } from 'lucide-react';
+import { fetchGeneralNews } from '../../../services/newsService';
 import styles from './NewsWidget.module.css';
-
-const NEWS_API_URL = 'https://cryptopanic.com/api/v1/posts/?auth_token=DEMO&public=true&kind=news';
 
 // Fallback sample data in case API fails
 const FALLBACK_NEWS = [
@@ -65,26 +64,24 @@ const NewsWidget = () => {
         setLoading(true);
         setError(null);
         try {
-            // Try fetching from CryptoPanic API
-            const response = await fetch(NEWS_API_URL);
-
-            if (!response.ok) {
-                throw new Error('API request failed');
-            }
-
-            const data = await response.json();
-
-            if (data.results && data.results.length > 0) {
-                setNews(data.results.slice(0, 5));
+            const articles = await fetchGeneralNews(5);
+            if (articles.length > 0) {
+                setNews(
+                    articles.map((a) => ({
+                        id: a.id,
+                        title: a.title,
+                        url: a.url,
+                        published_at: a.publishedAt,
+                        source: { title: a.source },
+                    }))
+                );
             } else {
-                // Use fallback data
                 setNews(FALLBACK_NEWS);
             }
         } catch (err) {
             console.error('Failed to fetch news:', err);
-            // Use fallback data on error
             setNews(FALLBACK_NEWS);
-            setError('Using cached data');
+            setError('Using fallback headlines');
         } finally {
             setLoading(false);
         }
@@ -160,7 +157,7 @@ const NewsWidget = () => {
             </div>
 
             <a
-                href="https://cryptopanic.com"
+                href="https://www.cryptocompare.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.viewAll}

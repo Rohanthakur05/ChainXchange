@@ -7,6 +7,9 @@ const { validateTrade, validateUnifiedTrade } = require('../middleware/validate'
 
 // ─── Public market routes ─────────────────────────────────────
 router.get('/', CryptoController.getMarkets);
+router.get('/search', CryptoController.searchCoins);
+router.get('/markets-by-ids', CryptoController.getMarketsByIds);
+router.get('/simple-prices', CryptoController.getSimplePrices);
 router.get('/chart-data/:coinId', CryptoController.getChartData);
 
 // Coin detail — optionalAuth so authenticated users also get their holdings

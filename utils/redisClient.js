@@ -3,20 +3,19 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-let redisClient = null;
+const createNoopClient = () => ({
+  get: async () => null,
+  setEx: async () => 'OK',
+  del: async () => 0
+});
+
+let redisClient = process.env.REDIS_URL ? null : createNoopClient();
 
 const connectRedis = async () => {
   // Skip Redis if REDIS_URL is not provided
   if (!process.env.REDIS_URL) {
     console.log('⚠️ Redis disabled - no REDIS_URL provided');
-
-    // Mock client methods so app doesn't crash
-    redisClient = {
-      get: async () => null,
-      setEx: async () => 'OK',
-      del: async () => 0
-    };
-
+    redisClient = createNoopClient();
     return;
   }
 
@@ -42,17 +41,13 @@ const connectRedis = async () => {
   } catch (error) {
     console.warn('⚠️ Failed to connect to Redis. Running without cache:', error.message);
 
-    redisClient = {
-      get: async () => null,
-      setEx: async () => 'OK',
-      del: async () => 0
-    };
+    redisClient = createNoopClient();
   }
 };
 
 module.exports = {
   get redisClient() {
-    return redisClient;
+    return redisClient || createNoopClient();
   },
   connectRedis
 };

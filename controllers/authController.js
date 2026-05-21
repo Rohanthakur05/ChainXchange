@@ -8,8 +8,8 @@ const { config } = require('../config/env');
 /* ─── Cookie options ──────────────────────────────────────────── */
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: config.cookieSecure,
+    sameSite: config.cookieSameSite,
+    secure: config.cookieSecure || config.cookieSameSite === 'none',
     maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
@@ -147,7 +147,7 @@ class AuthController {
      * GET /auth/logout
      */
     static logout(req, res) {
-        res.clearCookie('token', { httpOnly: true, sameSite: 'lax' });
+        res.clearCookie('token', COOKIE_OPTIONS);
         return res.json({ message: 'Logged out successfully' });
     }
 

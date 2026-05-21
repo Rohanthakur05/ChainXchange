@@ -1,10 +1,12 @@
 /**
  * Portfolio Service
- * 
+ *
  * Calculates portfolio performance history for charts.
+ * Uses backend CoinGecko proxy to avoid browser CORS/rate limits.
  */
 
-const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
+import api from '../utils/api';
+
 const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour cache for historical data
 
 // Cache for historical prices
@@ -25,15 +27,11 @@ export const fetchHistoricalPrices = async (coinId, days) => {
     }
 
     try {
-        const response = await fetch(
-            `${COINGECKO_BASE}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`
-        );
+        const response = await api.get(`/crypto/chart-data/${coinId}`, {
+            params: { days },
+        });
 
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = response.data;
 
         // Transform to { date, price } format
         const prices = data.prices.map(([timestamp, price]) => ({

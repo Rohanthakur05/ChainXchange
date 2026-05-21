@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAlertEvaluator, formatAlertMessage } from '../../hooks/useAlertEvaluator';
 import { useToast } from '../ui/Toast/Toast';
+import api from '../../utils/api';
 
 /**
  * AlertMonitor - Invisible component that monitors prices and triggers notifications
@@ -41,10 +42,10 @@ export const AlertMonitorWithPolling = ({ coinIds = [], pollingInterval = 30000 
         const fetchPrices = async () => {
             try {
                 // This would typically call your API or CoinGecko
-                const response = await fetch(
-                    `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd`
-                );
-                const data = await response.json();
+                const response = await api.get('/crypto/simple-prices', {
+                    params: { ids: coinIds.join(',') },
+                });
+                const data = response.data || {};
 
                 const newPriceMap = {};
                 Object.entries(data).forEach(([id, prices]) => {

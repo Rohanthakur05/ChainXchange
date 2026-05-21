@@ -8,6 +8,7 @@
     "dev:client": "cd client && npm run dev",
     "build": "cd client && npm install && npm run build",
     "test": "jest",
+    "smoke:api": "node scripts/smoke-api.js",
     "vercel-build": "npm run build"
   },
   "keywords": [],

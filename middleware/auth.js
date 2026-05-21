@@ -4,6 +4,12 @@ const { config } = require('../config/env');
 
 const JWT_SECRET = config.jwtSecret;
 
+const CLEAR_COOKIE_OPTIONS = {
+    httpOnly: true,
+    sameSite: config.cookieSameSite,
+    secure: config.cookieSecure || config.cookieSameSite === 'none'
+};
+
 /**
  * Verify JWT token from cookie and attach user to request.
  * Replaces the old raw-cookie-ID pattern.
@@ -25,17 +31,18 @@ const isAuthenticated = async (req, res, next) => {
             decoded = jwt.verify(token, JWT_SECRET);
         } catch (jwtErr) {
             // Token is expired or tampered — clear the cookie
-            res.clearCookie('token');
+            res.clearCookie('token', CLEAR_COOKIE_OPTIONS);
             return res.status(401).json({ error: 'Session expired. Please log in again.' });
         }
 
         const user = await User.findById(decoded.userId).select('-password').lean();
         if (!user) {
-            res.clearCookie('token');
+            res.clearCookie('token', CLEAR_COOKIE_OPTIONS);
             return res.status(401).json({ error: 'User not found. Please log in again.' });
         }
 
         req.user = user;
+        req.user.id = user._id.toString();
         res.locals.user = user;
         next();
     } catch (error) {
@@ -55,6 +62,7 @@ const optionalAuth = async (req, res, next) => {
             try {
                 const decoded = jwt.verify(token, JWT_SECRET);
                 const user = await User.findById(decoded.userId).select('-password').lean();
+                if (user) user.id = user._id.toString();
                 req.user = user || null;
                 res.locals.user = user || null;
             } catch {

@@ -96,7 +96,7 @@ const MarketHeatmap = ({ coins = [], loading = false }) => {
                             backgroundColor: getHeatmapColor(coin.priceChange24h),
                             flexGrow: Math.max(coin.sizeWeight, 1)
                         }}
-                        onClick={() => navigate(`/crypto/${coin.id}`)}
+                        onClick={() => navigate(`/markets/${coin.id}`)}
                         onMouseEnter={() => setHoveredCoin(coin)}
                         onMouseLeave={() => setHoveredCoin(null)}
                     >
